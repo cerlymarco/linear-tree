@@ -11,7 +11,7 @@ linear-tree is developed to be fully integrable with scikit-learn. ```LinearTree
 ```shell
 pip install linear-tree
 ```
-The module depends on NumPy, SciPy and Scikit-Learn. Python 3.6 or above is supported.
+The module depends on NumPy, SciPy and Scikit-Learn (>=0.23.0). Python 3.6 or above is supported.
 
 ## Media
 [Comig Soon]
