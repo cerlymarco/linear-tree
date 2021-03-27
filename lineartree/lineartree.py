@@ -988,6 +988,8 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         
         y_shape = np.shape(y)
         self.n_targets_ = y_shape[1] if len(y_shape) > 1 else 1
+        if self.n_targets_ < 2:
+            y = y.ravel()
         self._fit(X, y, sample_weight)
         
         return self
