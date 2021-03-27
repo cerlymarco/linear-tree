@@ -39,9 +39,9 @@ X, y = make_classification(n_samples=100, n_features=4,
 clf = LinearTreeClassifier(base_estimator=RidgeClassifier())
 clf.fit(X, y)
 ```
-More examples in the [notebooks folder](https://github.com/cerlymarco/linear-tree/tree/master/notebooks).
+More examples in the [notebooks folder](https://github.com/cerlymarco/linear-tree/tree/main/notebooks).
 
-Check the [API Reference](https://github.com/cerlymarco/linear-tree/tree/master/notebooks/README.md) to see the parameter configurations and the available methods.
+Check the [API Reference](https://github.com/cerlymarco/linear-tree/blob/main/notebooks/README.md) to see the parameter configurations and the available methods.
 
 ## Examples
 Show the model tree structure:
