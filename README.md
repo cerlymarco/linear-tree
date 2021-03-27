@@ -9,7 +9,7 @@ linear-tree is developed to be fully integrable with scikit-learn. ```LinearTree
 
 ## Installation
 ```shell
-pip install lineartree
+pip install linear-tree
 ```
 The module depends on NumPy, SciPy and Scikit-Learn. Python 3.6 or above is supported.
 
