@@ -56,16 +56,17 @@ class _FuncWrapper:
 #########################################################################
 
 
-def _partition_columns(n_columns, n_jobs):
+def _partition_columns(columns, n_jobs):
     """Private function to partition columns splitting between jobs."""
     # Compute the number of jobs
+    n_columns = len(columns)
     n_jobs = min(effective_n_jobs(n_jobs), n_columns)
 
     # Partition columns between jobs
     n_columns_per_job = np.full(n_jobs, n_columns // n_jobs, dtype=int)
     n_columns_per_job[:n_columns % n_jobs] += 1
     columns_per_job = np.cumsum(n_columns_per_job)
-    columns_per_job = np.split(np.arange(n_columns), columns_per_job)
+    columns_per_job = np.split(columns, columns_per_job)
     columns_per_job = columns_per_job[:-1]
 
     return n_jobs, columns_per_job
@@ -100,8 +101,8 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                 continue
             
             # create 2D bool mask for right/left children
-            left_mesh = np.ix_(~mask, _self.features_id_)
-            right_mesh = np.ix_(mask, _self.features_id_)
+            left_mesh = np.ix_(~mask, _self._linear_features)
+            right_mesh = np.ix_(mask, _self._linear_features)
             
             # initilize model for left child
             classes_left_ = None
@@ -210,6 +211,8 @@ class _LinearTree(BaseEstimator):
                  min_samples_leaf,
                  max_bins,
                  categorical_features,
+                 split_features,
+                 linear_features,
                  n_jobs): 
         
         self.base_estimator = base_estimator
@@ -219,6 +222,8 @@ class _LinearTree(BaseEstimator):
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
         self.categorical_features = categorical_features
+        self.split_features = split_features
+        self.linear_features = linear_features
         self.n_jobs = n_jobs
         
     def _parallel_args(self):
@@ -268,22 +273,22 @@ class _LinearTree(BaseEstimator):
         if loss is None:
             model = deepcopy(self.base_estimator)
             if weights is None or not support_sample_weight:
-                model.fit(X[:,self.features_id_], y)
+                model.fit(X[:,self._linear_features], y)
             else:
-                model.fit(X[:,self.features_id_], y, sample_weight=weights)
+                model.fit(X[:,self._linear_features], y, sample_weight=weights)
                 
             if hasattr(self, 'classes_'):
                 largs['classes'] = self.classes_
                 self._classes[''] = self.classes_
                 
-            loss = feval(model, X[:,self.features_id_], y, 
+            loss = feval(model, X[:,self._linear_features], y,
                          weights=weights, **largs)
             self._n_samples[''] = X.shape[0]
             self._models[''] = model
             self._losses[''] = loss
         
         # Parallel loops
-        n_jobs, split_feat = _partition_columns(self.n_features_in_, self.n_jobs)
+        n_jobs, split_feat = _partition_columns(self._split_features, self.n_jobs)
         
         # partition columns splittings between jobs
         all_results = Parallel(n_jobs=n_jobs, verbose=0,
@@ -292,7 +297,7 @@ class _LinearTree(BaseEstimator):
                 feat,
                 self, X, y,
                 weights, support_sample_weight,
-                bins[feat[0]:(feat[-1]+1)], 
+                [bins[i] for i in feat],
                 loss
             )
             for feat in split_feat)
@@ -344,15 +349,13 @@ class _LinearTree(BaseEstimator):
         self : object
         """
         n_sample, self.n_features_in_ = X.shape
-        feat = np.arange(self.n_features_in_)
-        self.features_id_ = feat[~np.isin(feat, self._categorical_features)]
-        
+
         # extract quantiles
         bins = np.linspace(0,1, self.max_bins)[1:-1]
         bins = np.quantile(X, bins, axis=0, interpolation='midpoint')
         bins = list(bins.T)
-        bins = [np.unique(q) if c in self.features_id_ 
-                else np.unique(X[:,c]) for c,q in enumerate(bins)]
+        bins = [np.unique(X[:, c]) if c in self._categorical_features
+                else np.unique(q) for c, q in enumerate(bins)]
         
         # check if base_estimator supports fitting with sample_weights
         support_sample_weight = has_fit_parameter(self.base_estimator,
@@ -547,7 +550,53 @@ class _LinearTree(BaseEstimator):
         else:
             categorical_features = [] 
         self._categorical_features = categorical_features
-            
+
+        if self.split_features is not None:
+            split_features = np.unique(self.split_features)
+
+            if not issubclass(split_features.dtype.type, numbers.Integral):
+                raise ValueError(
+                    "No valid specification of split_features. "
+                    "Only a scalar, list or array-like of all "
+                    "integers is allowed."
+                )
+
+            if ((split_features < 0).any() or
+                    (split_features >= X.shape[1]).any()):
+                raise ValueError(
+                    'all splitting features must be in [0, {}].'.format(
+                        X.shape[1] - 1)
+                )
+        else:
+            split_features = np.arange(X.shape[1])
+        self._split_features = split_features
+
+        if self.linear_features is not None:
+            linear_features = np.unique(self.linear_features)
+
+            if not issubclass(linear_features.dtype.type, numbers.Integral):
+                raise ValueError(
+                    "No valid specification of linear_features. "
+                    "Only a scalar, list or array-like of all "
+                    "integers is allowed."
+                )
+
+            if ((linear_features < 0).any() or
+                    (linear_features >= X.shape[1]).any()):
+                raise ValueError(
+                    'all linear features must be in [0, {}].'.format(
+                        X.shape[1] - 1)
+                )
+
+            if np.isin(linear_features, categorical_features).any():
+                raise ValueError(
+                    "linear features cannot be categorical features."
+                )
+        else:
+            linear_features = np.setdiff1d(np.arange(X.shape[1]),
+                                           categorical_features)
+        self._linear_features = linear_features
+
         self._grow(X, y, sample_weight)
         
         return self
@@ -901,7 +950,24 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
           features.
         - integer : integer index indicating a categorical
           feature.
-          
+
+    split_features : int or array-like of int, default=None
+        Defines which features can be used to split on.
+        All split feature indices must be in `[0, n_features)`.
+        - None : All features will be used for splitting.
+        - integer array-like : integer indices indicating splitting features.
+        - integer : integer index indicating a single splitting feature
+
+    linear_features : int or array-like of int, default=None
+        Defines which features are used for the linear model in the leaves.
+        All linear feature indices must be in `[0, n_features)`.
+        - None : All features except those in `categorical_features`
+          will be used in the leaf models
+        - integer array-like : integer indices indicating features to
+          be used in the leaf models
+        - integer : integer index indicating a single feature to be used
+          in the leaf models
+
     n_jobs : int, default=None
         The number of jobs to run in parallel for model fitting. 
         ``None`` means 1 using one processor. ``-1`` means using all
@@ -911,11 +977,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
     ----------
     n_features_in_ : int
         The number of features when :meth:`fit` is performed.
-        
-    features_id_ : ndarray of int
-        The integer ids of features when :meth:`fit` is performed.
-        This not include categorical_features.
-        
+
     n_targets_ : int
         The number of targets when :meth:`fit` is performed.
     
@@ -940,6 +1002,8 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
                  min_samples_leaf = 0.1,
                  max_bins = 25,
                  categorical_features = None,
+                 split_features = None,
+                 linear_features = None,
                  n_jobs = None): 
         
         self.base_estimator = base_estimator
@@ -949,6 +1013,8 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
         self.categorical_features = categorical_features
+        self.split_features = split_features
+        self.linear_features = linear_features
         self.n_jobs = n_jobs
 
     def fit(self, X, y, sample_weight=None):
@@ -1025,7 +1091,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
             if (~mask).all():
                 continue
             
-            pred[mask] = self._models[b].predict(X[np.ix_(mask, self.features_id_)])
+            pred[mask] = self._models[b].predict(X[np.ix_(mask, self._linear_features)])
             
         return pred
     
@@ -1096,7 +1162,24 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
           features.
         - integer : integer index indicating a categorical
           feature. 
-          
+
+    split_features : int or array-like of int, default=None
+        Defines which features can be used to split on.
+        All split feature indices must be in `[0, n_features)`.
+        - None : All features will be used for splitting.
+        - integer array-like : integer indices indicating splitting features.
+        - integer : integer index indicating a single splitting feature
+
+    linear_features : int or array-like of int, default=None
+        Defines which features are used for the linear model in the leaves.
+        All linear feature indices must be in `[0, n_features)`.
+        - None : All features except those in `categorical_features`
+          will be used in the leaf models
+        - integer array-like : integer indices indicating features to
+          be used in the leaf models
+        - integer : integer index indicating a single feature to be used
+          in the leaf models
+
     n_jobs : int, default=None
         The number of jobs to run in parallel for model fitting. 
         ``None`` means 1 using one processor. ``-1`` means using all
@@ -1106,10 +1189,6 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
     ----------
     n_features_in_ : int
         The number of features when :meth:`fit` is performed. 
-        
-    features_id_ : ndarray of int
-        The integer ids of features when :meth:`fit` is performed. 
-        This not include categorical_features. 
         
     classes_ : ndarray of shape (n_classes, )
         A list of class labels known to the classifier.
@@ -1135,6 +1214,8 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
                  min_samples_leaf = 0.1,
                  max_bins = 25,
                  categorical_features = None,
+                 split_features = None,
+                 linear_features = None,
                  n_jobs = None): 
         
         self.base_estimator = base_estimator
@@ -1144,6 +1225,8 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
         self.categorical_features = categorical_features
+        self.split_features = split_features
+        self.linear_features = linear_features
         self.n_jobs = n_jobs
         
     def fit(self, X, y, sample_weight=None):
@@ -1219,7 +1302,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
             if (~mask).all():
                 continue
                 
-            pred[mask] = self._models[b].predict(X[np.ix_(mask, self.features_id_)])
+            pred[mask] = self._models[b].predict(X[np.ix_(mask, self._linear_features)])
             
         return pred
     
@@ -1256,7 +1339,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
                     continue
                     
                 pred[np.ix_(mask, np.isin(self.classes_, self._classes[b]))] = \
-                    self._models[b].predict_proba(X[np.ix_(mask, self.features_id_)])
+                    self._models[b].predict_proba(X[np.ix_(mask, self._linear_features)])
         
         else:
             pred_class = self.predict(X)
