@@ -114,11 +114,13 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+    
         Samples. 
     
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression 
+        
         The predicted values.
 
 - ```apply(X)```
@@ -128,11 +130,13 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `X_leaves` : array-like of shape (n_samples, ) 
+        
         For each datapoint x in X, return the index of the leaf x ends up in. Leaves are numbered within ``[0; n_nodes)``, possibly with gaps in the numbering.
 
 - ```decision_path(X)```
@@ -142,11 +146,13 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `indicator` : sparse matrix of shape (n_samples, n_nodes) 
+        
         Return a node indicator CSR matrix where non zero elements indicates that the samples goes through the nodes.
 
 - ```summary(feature_names=None, only_leaves=False, max_depth=None)```
@@ -156,15 +162,21 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `only_leaves` : bool, default=False
+    
         Store only information of leaf nodes.
+    
     - `max_depth` : int, default=None
+    
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
-    - `summary` : nested dict  
+    - `summary` : nested dict 
+     
         The keys are the integer map of each node. 
         The values are dicts containing information for that node:
         - 'col' (^): column used for splitting;
@@ -187,13 +199,17 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `max_depth` : int, default=None
+    
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
     - `graph` : pydot.Dot instance  
+    
         Return an instance representing the Linear Tree. Splitting nodes have a rectangular shape while leaf nodes have a circular one.
 
 - ```plot_model(feature_names=None, max_depth=None)```
@@ -205,13 +221,17 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `max_depth` : int, default=None
+    
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
     - A Jupyter notebook Image object if Jupyter is installed.
+    
         This enables in-line display of the model plots in notebooks. Splitting nodes have a rectangular shape while leaf nodes have a circular one.
 
 
@@ -313,10 +333,15 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+    
         The training input samples.  
+        
     - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+    
         Target values.
+        
     - `sample_weight` : array-like of shape (n_samples, ), default=None
+        
         Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
     
     **Returns:**
@@ -330,11 +355,13 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, ) 
+        
         The predicted classes.
 
 - ```predict_proba(X)```
@@ -345,11 +372,13 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, n_classes) 
+        
         The class probabilities of the input samples. The order of the classes corresponds to that in the attribute :term:`classes_`.
 
 - ```predict_log_proba(X)```
@@ -360,11 +389,13 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, n_classes) 
+        
         The class log-probabilities of the input samples. The order of the classes corresponds to that in the attribute :term:`classes_`.
 
 - ```apply(X)```
@@ -374,11 +405,13 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `X_leaves` : array-like of shape (n_samples, ) 
+        
         For each datapoint x in X, return the index of the leaf x ends up in. Leaves are numbered within ``[0; n_nodes)``, possibly with gaps in the numbering.
 
 - ```decision_path(X)```
@@ -388,11 +421,13 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
     
     **Returns:**
     
     - `indicator` : sparse matrix of shape (n_samples, n_nodes) 
+        
         Return a node indicator CSR matrix where non zero elements indicates that the samples goes through the nodes.
 
 - ```summary(feature_names=None, only_leaves=False, max_depth=None)```
@@ -402,15 +437,21 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `only_leaves` : bool, default=False
+        
         Store only information of leaf nodes.
+    
     - `max_depth` : int, default=None
+        
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
-    - `summary` : nested dict  
+    - `summary` : nested dict
+      
         The keys are the integer map of each node. 
         The values are dicts containing information for that node:
         - 'col' (^): column used for splitting;
@@ -433,13 +474,17 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `max_depth` : int, default=None
+        
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
     - `graph` : pydot.Dot instance  
+        
         Return an instance representing the Linear Tree. Splitting nodes have a rectangular shape while leaf nodes have a circular one.
 
 - ```plot_model(feature_names=None, max_depth=None)```
@@ -451,13 +496,17 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     **Parameters:**
     
     - `feature_names` : array-like of shape (n_features, ), default=None
+        
         Names of each of the features. If None, generic names will be used (“X[0]”, “X[1]”, …). 
+    
     - `max_depth` : int, default=None
+        
         The maximum depth of the representation. If None, the tree is fully generated.
     
     **Returns:**
     
     - A Jupyter notebook Image object if Jupyter is installed.
+        
         This enables in-line display of the model plots in notebooks. Splitting nodes have a rectangular shape while leaf nodes have a circular one.
         
         
@@ -559,10 +608,15 @@ class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimat
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         The training input samples.  
+    
     - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        
         Target values.
+    
     - `sample_weight` : array-like of shape (n_samples, ), default=None
+        
         Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
     
     **Returns:**
@@ -576,11 +630,13 @@ class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimat
     **Parameters:**
 
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
 
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression.
+        
         The predicted values.
         
 - ```transform(X)```
@@ -590,11 +646,13 @@ class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimat
     **Parameters:**
 
     - `X` : array-like of shape (n_samples, n_features)
+        
         Input data to be transformed. Use ``dtype=np.float32`` for maximum efficiency. 
 
     **Returns:**
     
     - `X_transformed` : ndarray of shape (n_samples, n_out).
+        
         Transformed dataset.
         `n_out` is equal to `n_features` + `n_estimators`.
         
@@ -700,10 +758,15 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
     **Parameters:**
     
     - `X` : array-like of shape (n_samples, n_features)
+        
         The training input samples.  
+    
     - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        
         Target values.
+    
     - `sample_weight` : array-like of shape (n_samples, ), default=None
+        
         Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
     
     **Returns:**
@@ -717,11 +780,13 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
     **Parameters:**
 
     - `X` : array-like of shape (n_samples, n_features)
+        
         Samples. 
 
     **Returns:**
     
     - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression.
+        
         The predicted classes.
         
 - ```transform(X)```
@@ -731,10 +796,12 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
     **Parameters:**
 
     - `X` : array-like of shape (n_samples, n_features)
+        
         Input data to be transformed. Use ``dtype=np.float32`` for maximum efficiency. 
 
     **Returns:**
     
-    - `X_transformed` : ndarray of shape (n_samples, n_out).
+    - `X_transformed` : ndarray of shape (n_samples, n_out)
+        
         Transformed dataset.
         `n_out` is equal to `n_features` + `n_estimators`.
