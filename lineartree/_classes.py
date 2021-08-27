@@ -876,7 +876,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         self.min_impurity_split = min_impurity_split
         self.ccp_alpha = ccp_alpha
 
-    def _fit(self, X, y, sample_weight):
+    def _fit(self, X, y, sample_weight=None):
         """Build a Linear Boosting from the training set (X, y).
 
         Parameters

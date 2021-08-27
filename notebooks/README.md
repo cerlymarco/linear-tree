@@ -2,10 +2,11 @@
 
 ## LinearTreeRegressor
 ```
-class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_depth = 5, min_samples_split = 6, min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, n_jobs = None)
+class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_depth = 5, min_samples_split = 6, min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
 ```
 
 #### Parameters:
+
 - ```base_estimator : object```
     
     The base estimator to fit on dataset splits.
@@ -52,26 +53,43 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     - None : no feature will be considered categorical.
     - integer array-like : integer indices indicating categorical features.
     - integer : integer index indicating a categorical feature.
+    
+- ```split_features : int or array-like of int, default=None```
+        
+    Defines which features can be used to split on.
+    All split feature indices must be in `[0, n_features)`.
+    - None : All features will be used for splitting.
+    - integer array-like : integer indices indicating splitting features.
+    - integer : integer index indicating a single splitting feature.
+    
+- ```linear_features : int or array-like of int, default=None```
+
+    Defines which features are used for the linear model in the leaves.
+    All linear feature indices must be in `[0, n_features)`.
+    - None : All features except those in `categorical_features` will be used in the leaf models.
+    - integer array-like : integer indices indicating features to be used in the leaf models.
+    - integer : integer index indicating a single feature to be used in the leaf models.
 
 - ```n_jobs : int, default=None```
 
     The number of jobs to run in parallel for model fitting. ``None`` means 1 using one processor. ``-1`` means using all processors. 
 
 #### Attributes:
+
 - ```n_features_in_ : int```
 
     The number of features when :meth:`fit` is performed.
     
-- ```features_id_ : ndarray of int```
+- ```feature_importances_ : ndarray of shape (n_features, )```
 
-    The integer ids of features when :meth:`fit` is performed.
-    This not include categorical_features.
+    Normalized total reduction of criteria by splitting features.
     
 - ```n_targets_ : int```
 
     The number of targets when :meth:`fit` is performed.
 
 #### Methods:
+
 - ```fit(X, y, sample_weight=None)```
 
     Build a Linear Tree of a linear estimator from the training set (X, y).
@@ -146,7 +164,7 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
     
     **Returns:**
     
-    - `nodes` : nested dict  
+    - `summary` : nested dict  
         The keys are the integer map of each node. 
         The values are dicts containing information for that node:
         - 'col' (^): column used for splitting;
@@ -199,7 +217,7 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
 
 ## LinearTreeClassifier
 ```
-class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max_depth = 5, min_samples_split = 6,  min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, n_jobs = None)
+class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max_depth = 5, min_samples_split = 6,  min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
 ```
 
 #### Parameters:
@@ -252,6 +270,22 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     - integer array-like : integer indices indicating categorical features.
     - integer : integer index indicating a categorical feature.
     
+- ```split_features : int or array-like of int, default=None```
+        
+    Defines which features can be used to split on.
+    All split feature indices must be in `[0, n_features)`.
+    - None : All features will be used for splitting.
+    - integer array-like : integer indices indicating splitting features.
+    - integer : integer index indicating a single splitting feature.
+    
+- ```linear_features : int or array-like of int, default=None```
+
+    Defines which features are used for the linear model in the leaves.
+    All linear feature indices must be in `[0, n_features)`.
+    - None : All features except those in `categorical_features` will be used in the leaf models.
+    - integer array-like : integer indices indicating features to be used in the leaf models.
+    - integer : integer index indicating a single feature to be used in the leaf models.
+    
 - ```n_jobs : int, default=None```
 
     The number of jobs to run in parallel for model fitting. ``None`` means 1 using one processor. ``-1`` means using all processors. 
@@ -262,10 +296,9 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
 
     The number of features when :meth:`fit` is performed.
     
-- ```features_id_ : ndarray of int```
+- ```feature_importances_ : ndarray of shape (n_features, )```
 
-    The integer ids of features when :meth:`fit` is performed.
-    This not include categorical_features.
+    Normalized total reduction of criteria by splitting features.
     
 - ```classes_ : ndarray of shape (n_classes, )```
 
@@ -377,7 +410,7 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     
     **Returns:**
     
-    - `nodes` : nested dict  
+    - `summary` : nested dict  
         The keys are the integer map of each node. 
         The values are dicts containing information for that node:
         - 'col' (^): column used for splitting;
@@ -426,3 +459,282 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
     
     - A Jupyter notebook Image object if Jupyter is installed.
         This enables in-line display of the model plots in notebooks. Splitting nodes have a rectangular shape while leaf nodes have a circular one.
+        
+        
+## LinearBoostRegressor
+```
+class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
+```
+
+#### Parameters:
+
+- ```base_estimator : object```
+
+    The base estimator iteratively fitted.
+    The base estimator must be a sklearn.linear_model.
+    
+- ```loss : {"linear", "square", "absolute", "exponential"}, default="linear"```
+
+    The function used to calculate the residuals of each sample.
+    
+- ```n_estimators : int, default=10```
+
+    The number of boosting stages to perform. It corresponds to the number of the new features generated.
+    
+- ```max_depth : int, default=3```
+
+    The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
+    
+- ```min_samples_split : int or float, default=2```
+
+    The minimum number of samples required to split an internal node:
+    - If int, then consider `min_samples_split` as the minimum number.
+    - If float, then `min_samples_split` is a fraction and `ceil(min_samples_split * n_samples)` are the minimum number of samples for each split.
+    
+- ```min_samples_leaf : int or float, default=1```
+  
+    The minimum number of samples required to be at a leaf node. 
+    A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples in each of the left and right branches.  This may have the effect of smoothing the model, especially in regression.
+    - If int, then consider `min_samples_leaf` as the minimum number.
+    - If float, then `min_samples_leaf` is a fraction and `ceil(min_samples_leaf * n_samples)` are the minimum number of samples for each node.
+  
+- ```min_weight_fraction_leaf : float, default=0.0```
+
+    The minimum weighted fraction of the sum total of weights (of all the input samples) required to be at a leaf node. Samples have equal weight when sample_weight is not provided. 
+  
+- ```max_features : int, float or {"auto", "sqrt", "log2"}, default=None```
+  
+    The number of features to consider when looking for the best split:
+    - If int, then consider `max_features` features at each split.
+    - If float, then `max_features` is a fraction and `int(max_features * n_features)` features are considered at each split.
+    - If "auto", then `max_features=n_features`.
+    - If "sqrt", then `max_features=sqrt(n_features)`.
+    - If "log2", then `max_features=log2(n_features)`.
+    - If None, then `max_features=n_features`.
+    Note: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than ``max_features`` features.  
+  
+- ```max_leaf_nodes : int, default=None```
+  
+    Grow a tree with ``max_leaf_nodes`` in best-first fashion.
+    Best nodes are defined as relative reduction in impurity.
+    If None then unlimited number of leaf nodes.
+  
+- ```min_impurity_decrease : float, default=0.0```
+  
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
+  
+- ```min_impurity_split : float, default=0```
+
+    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.  
+  
+- ```ccp_alpha : non-negative float, default=0.0```
+
+    Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with the largest cost complexity that is smaller than ``ccp_alpha`` will be chosen. By default, no pruning is performed. See :ref:`minimal_cost_complexity_pruning` for details.  
+  
+#### Attributes:
+
+- ```n_features_in_ : int```
+
+    The number of features when :meth:`fit` is performed.
+    
+- ```n_features_out_ : int```
+
+    The total number of features used to fit the base estimator in the last iteration. The number of output features is equal to the sum of n_features_in_ and n_estimators.
+    
+- ```coef_ : array of shape (n_features_out_, ) or (n_targets, n_features_out_)```
+
+    Estimated coefficients for the linear regression problem.
+    If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features_out_), while if only one target is passed, this is a 1D array of length n_features.
+
+- ```intercept_ : float or array of shape (n_targets, )```
+
+    Independent term in the linear model. Set to 0 if `fit_intercept = False` in `base_estimator`
+    
+#### Methods:
+
+- ```fit(X, y, sample_weight=None)```
+
+    Build a Linear Boosting from the training set (X, y).
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        The training input samples.  
+    - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        Target values.
+    - `sample_weight` : array-like of shape (n_samples, ), default=None
+        Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
+    
+    **Returns:**
+    
+    - `self` : object
+
+- ```predict(X)```
+
+    Predict regression target for X.
+
+    **Parameters:**
+
+    - `X` : array-like of shape (n_samples, n_features)
+        Samples. 
+
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression.
+        The predicted values.
+        
+- ```transform(X)```
+
+    Transform dataset.
+
+    **Parameters:**
+
+    - `X` : array-like of shape (n_samples, n_features)
+        Input data to be transformed. Use ``dtype=np.float32`` for maximum efficiency. 
+
+    **Returns:**
+    
+    - `X_transformed` : ndarray of shape (n_samples, n_out).
+        Transformed dataset.
+        `n_out` is equal to `n_features` + `n_estimators`.
+        
+## LinearBoostClassifier
+```
+class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
+```
+
+#### Parameters:
+
+- ```base_estimator : object```
+
+    The base estimator iteratively fitted.
+    The base estimator must be a sklearn.linear_model.
+    
+- ```loss : {"hamming", "entropy"}, default="hamming"```
+
+    The function used to calculate the residuals of each sample.
+    
+- ```n_estimators : int, default=10```
+
+    The number of boosting stages to perform. It corresponds to the number of the new features generated.
+    
+- ```max_depth : int, default=3```
+
+    The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
+    
+- ```min_samples_split : int or float, default=2```
+
+    The minimum number of samples required to split an internal node:
+    - If int, then consider `min_samples_split` as the minimum number.
+    - If float, then `min_samples_split` is a fraction and `ceil(min_samples_split * n_samples)` are the minimum number of samples for each split.
+    
+- ```min_samples_leaf : int or float, default=1```
+  
+    The minimum number of samples required to be at a leaf node. 
+    A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples in each of the left and right branches.  This may have the effect of smoothing the model, especially in regression.
+    - If int, then consider `min_samples_leaf` as the minimum number.
+    - If float, then `min_samples_leaf` is a fraction and `ceil(min_samples_leaf * n_samples)` are the minimum number of samples for each node.
+  
+- ```min_weight_fraction_leaf : float, default=0.0```
+
+    The minimum weighted fraction of the sum total of weights (of all the input samples) required to be at a leaf node. Samples have equal weight when sample_weight is not provided. 
+  
+- ```max_features : int, float or {"auto", "sqrt", "log2"}, default=None```
+  
+    The number of features to consider when looking for the best split:
+    - If int, then consider `max_features` features at each split.
+    - If float, then `max_features` is a fraction and `int(max_features * n_features)` features are considered at each split.
+    - If "auto", then `max_features=n_features`.
+    - If "sqrt", then `max_features=sqrt(n_features)`.
+    - If "log2", then `max_features=log2(n_features)`.
+    - If None, then `max_features=n_features`.
+    Note: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than ``max_features`` features.  
+  
+- ```max_leaf_nodes : int, default=None```
+  
+    Grow a tree with ``max_leaf_nodes`` in best-first fashion.
+    Best nodes are defined as relative reduction in impurity.
+    If None then unlimited number of leaf nodes.
+  
+- ```min_impurity_decrease : float, default=0.0```
+  
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
+  
+- ```min_impurity_split : float, default=0```
+
+    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.  
+  
+- ```ccp_alpha : non-negative float, default=0.0```
+
+    Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with the largest cost complexity that is smaller than ``ccp_alpha`` will be chosen. By default, no pruning is performed. See :ref:`minimal_cost_complexity_pruning` for details.  
+  
+#### Attributes:
+
+- ```n_features_in_ : int```
+
+    The number of features when :meth:`fit` is performed.
+    
+- ```n_features_out_ : int```
+
+    The total number of features used to fit the base estimator in the last iteration. The number of output features is equal to the sum of n_features_in_ and n_estimators.
+    
+- ```coef_ : array of shape (n_features_out_, ) or (n_targets, n_features_out_)```
+
+    Estimated coefficients for the linear regression problem.
+    If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features_out_), while if only one target is passed, this is a 1D array of length n_features.
+
+- ```intercept_ : float or array of shape (n_targets, )```
+
+    Independent term in the linear model. Set to 0 if `fit_intercept = False` in `base_estimator`
+    
+- ```classes_ : ndarray of shape (n_classes, )```
+
+    A list of class labels known to the classifier.
+    
+#### Methods:
+
+- ```fit(X, y, sample_weight=None)```
+
+    Build a Linear Boosting from the training set (X, y).
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        The training input samples.  
+    - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        Target values.
+    - `sample_weight` : array-like of shape (n_samples, ), default=None
+        Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
+    
+    **Returns:**
+    
+    - `self` : object
+
+- ```predict(X)```
+
+    Predict class for X.
+
+    **Parameters:**
+
+    - `X` : array-like of shape (n_samples, n_features)
+        Samples. 
+
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression.
+        The predicted classes.
+        
+- ```transform(X)```
+
+    Transform dataset.
+
+    **Parameters:**
+
+    - `X` : array-like of shape (n_samples, n_features)
+        Input data to be transformed. Use ``dtype=np.float32`` for maximum efficiency. 
+
+    **Returns:**
+    
+    - `X_transformed` : ndarray of shape (n_samples, n_out).
+        Transformed dataset.
+        `n_out` is equal to `n_features` + `n_estimators`.
