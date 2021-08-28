@@ -19,6 +19,7 @@ The module depends on NumPy, SciPy and Scikit-Learn (>=0.23.0). Python 3.6 or ab
 - [Linear Tree: the perfect mix of Linear Model and Decision Tree](https://towardsdatascience.com/linear-tree-the-perfect-mix-of-linear-model-and-decision-tree-2eaed21936b7)
 - [Model Tree: handle Data Shifts mixing Linear Model and Decision Tree](https://towardsdatascience.com/model-tree-handle-data-shifts-mixing-linear-model-and-decision-tree-facfd642e42b)
 - [Explainable AI with Linear Trees](https://towardsdatascience.com/explainable-ai-with-linear-trees-7e30a6f067d7)
+- [Improve Linear Regression for Time Series Forecasting](https://towardsdatascience.com/improve-linear-regression-for-time-series-forecasting-e36f3c3e3534#a80b-b6010ccb1c21)
 
 ## Usage
 ##### Linear Tree Regression
