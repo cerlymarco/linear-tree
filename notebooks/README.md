@@ -2,7 +2,7 @@
 
 ## LinearTreeRegressor
 ```
-class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_depth = 5, min_samples_split = 6, min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
+class lineartree.LinearTreeRegressor(base_estimator, *, criterion = 'mse', max_depth = 5, min_samples_split = 6, min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
 ```
 
 #### Parameters:
@@ -237,7 +237,7 @@ class lineartree.LinearTreeRegressor(base_estimator, criterion = 'mse', max_dept
 
 ## LinearTreeClassifier
 ```
-class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max_depth = 5, min_samples_split = 6,  min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
+class lineartree.LinearTreeClassifier(base_estimator, *, criterion = 'hamming', max_depth = 5, min_samples_split = 6,  min_samples_leaf = 0.1, max_bins = 25, categorical_features = None, split_features = None, linear_features = None, n_jobs = None)
 ```
 
 #### Parameters:
@@ -512,7 +512,7 @@ class lineartree.LinearTreeClassifier(base_estimator, criterion = 'hamming', max
         
 ## LinearBoostRegressor
 ```
-class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
+class lineartree.LinearBoostRegressor(base_estimator, *, loss = 'linear', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
 ```
 
 #### Parameters:
@@ -617,8 +617,8 @@ class lineartree.LinearBoostRegressor(base_estimator, loss = 'linear', n_estimat
     
     - `sample_weight` : array-like of shape (n_samples, ), default=None
         
-        Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
-    
+        Sample weights. 
+        
     **Returns:**
     
     - `self` : object
@@ -739,7 +739,7 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
 - ```coef_ : array of shape (n_features_out_, ) or (n_targets, n_features_out_)```
 
     Estimated coefficients for the linear regression problem.
-    If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features_out_), while if only one target is passed, this is a 1D array of length n_features.
+    If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features_out_), while if only one target is passed, this is a 1D array of length n_features_out_.
 
 - ```intercept_ : float or array of shape (n_targets, )```
 
@@ -767,8 +767,8 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
     
     - `sample_weight` : array-like of shape (n_samples, ), default=None
         
-        Sample weights. If None, then samples are equally weighted. Note that if the base estimator does not support sample weighting, the sample weights are still used to evaluate the splits.
-    
+        Sample weights. 
+        
     **Returns:**
     
     - `self` : object
@@ -805,3 +805,445 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
         
         Transformed dataset.
         `n_out` is equal to `n_features` + `n_estimators`.
+        
+## LinearForestRegressor
+```
+class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
+```
+
+#### Parameters:
+
+- ```base_estimator : object```
+
+    The linear estimator fitted on the raw target.
+    The linear estimator must be a regressor from sklearn.linear_model.
+    
+- ```n_estimators : int, default=100```
+
+    The number of trees in the forest.
+    
+- ```max_depth : int, default=None```
+
+    The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
+    
+- ```min_samples_split : int or float, default=2```
+
+    The minimum number of samples required to split an internal node:    
+    - If int, then consider `min_samples_split` as the minimum number.
+    - If float, then `min_samples_split` is a fraction and `ceil(min_samples_split * n_samples)` are the minimum number of samples for each split.
+      
+- ```min_samples_leaf : int or float, default=1```
+
+    The minimum number of samples required to be at a leaf node.
+    A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples in each of the left and right branches.  This may have the effect of smoothing the model, especially in regression.
+    - If int, then consider `min_samples_leaf` as the minimum number.
+    - If float, then `min_samples_leaf` is a fraction and `ceil(min_samples_leaf * n_samples)` are the minimum number of samples for each node.
+      
+- ```min_weight_fraction_leaf : float, default=0.0```
+
+    The minimum weighted fraction of the sum total of weights (of all the input samples) required to be at a leaf node. Samples have equal weight when sample_weight is not provided.
+    
+- ```max_features : {"auto", "sqrt", "log2"}, int or float, default="auto"```
+
+    The number of features to consider when looking for the best split:    
+    - If int, then consider `max_features` features at each split.
+    - If float, then `max_features` is a fraction and `round(max_features * n_features)` features are considered at each split.
+    - If "auto", then `max_features=n_features`.
+    - If "sqrt", then `max_features=sqrt(n_features)`.
+    - If "log2", then `max_features=log2(n_features)`.
+    - If None, then `max_features=n_features`.
+    Note: the search for a split does not stop until at least one
+    valid partition of the node samples is found, even if it requires to
+    effectively inspect more than ``max_features`` features.
+    
+- ```max_leaf_nodes : int, default=None```
+
+    Grow trees with ``max_leaf_nodes`` in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.
+    
+- ```min_impurity_decrease : float, default=0.0```
+
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
+    
+- ```min_impurity_split : float, default=None```
+
+    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.
+    
+- ```bootstrap : bool, default=True```
+
+    Whether bootstrap samples are used when building trees. If False, the whole dataset is used to build each tree.
+    
+- ```oob_score : bool, default=False```
+
+    Whether to use out-of-bag samples to estimate the generalization score. Only available if bootstrap=True.
+    
+- ```n_jobs : int, default=None```
+
+    The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`, :meth:`decision_path` and :meth:`apply` are all parallelized over the trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context. ``-1`` means using all processors.
+    
+- ```random_state : int, RandomState instance or None, default=None```
+
+    Controls both the randomness of the bootstrapping of the samples used when building trees (if ``bootstrap=True``) and the sampling of the features to consider when looking for the best split at each node (if ``max_features < n_features``).
+    
+- ```ccp_alpha : non-negative float, default=0.0```
+
+    Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with the largest cost complexity that is smaller than ``ccp_alpha`` will be chosen. By default, no pruning is performed. See :ref:`minimal_cost_complexity_pruning` for details.
+    
+- ```max_samples : int or float, default=None```
+
+    If bootstrap is True, the number of samples to draw from X to train each base estimator.
+    - If None (default), then draw `X.shape[0]` samples.
+    - If int, then draw `max_samples` samples.
+    - If float, then draw `max_samples * X.shape[0]` samples. Thus,
+      `max_samples` should be in the interval `(0, 1)`.
+
+#### Attributes:
+
+- ```n_features_in_ : int```
+
+    The number of features when :meth:`fit` is performed.
+    
+- ```feature_importances_ : ndarray of shape (n_features, )```
+
+    The impurity-based feature importances.
+    The higher, the more important the feature.
+    The importance of a feature is computed as the (normalized) total reduction of the criterion brought by that feature.  It is also known as the Gini importance.
+    
+- ```coef_ : array of shape (n_features, ) or (n_targets, n_features)```
+
+    Estimated coefficients for the linear regression problem. If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features), while if only one target is passed, this is a 1D array of length n_features.
+    
+- ```intercept_ : float or array of shape (n_targets,)```
+
+    Independent term in the linear model. Set to 0 if `fit_intercept = False` in `base_estimator`. 
+    
+- ```base_estimator_ : object```
+
+    A fitted linear model instance.
+    
+- ```forest_estimator_ : object```
+
+    A fitted random forest instance. 
+    
+#### Methods:
+
+- ```fit(X, y, sample_weight=None)```
+
+    Build a Linear Forest from the training set (X, y).
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The training input samples.  
+    
+    - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        
+        Target values.
+    
+    - `sample_weight` : array-like of shape (n_samples, ), default=None
+        
+        Sample weights. 
+        
+    **Returns:**
+    
+    - `self` : object
+
+- ```predict(X)```
+
+    Predict regression target for X.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        Samples.  
+        
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, ) or also (n_samples, n_targets) if multitarget regression.
+    
+        The predicted values.
+        
+- ```apply(X)```
+
+    Apply trees in the forest to X, return leaf indices.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The input samples.  
+        
+    **Returns:**
+    
+    - `X_leaves` : array-like of shape (n_samples, n_estimators).
+    
+        For each datapoint x in X and for each tree in the forest, return the index of the leaf x ends up in.
+        
+- ```decision_path(X)```
+
+    Return the decision path in the forest.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The input samples.  
+        
+    **Returns:**
+    
+    - `indicator` : sparse matrix of shape (n_samples, n_nodes)
+        
+        Return a node indicator matrix where non zero elements indicates that the samples goes through the nodes. The matrix is of CSR format.
+        
+    - `n_nodes_ptr` : ndarray of shape (n_estimators + 1, )
+        
+        The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]] gives the indicator value for the i-th estimator.
+
+## LinearForestClassifier
+```
+class lineartree.LinearForestClassifier(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
+```
+
+#### Parameters:
+
+- ```base_estimator : object```
+
+    The linear estimator fitted on the raw target.
+    The linear estimator must be a regressor from sklearn.linear_model.
+    
+- ```n_estimators : int, default=100```
+
+    The number of trees in the forest.
+    
+- ```max_depth : int, default=None```
+
+    The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
+    
+- ```min_samples_split : int or float, default=2```
+
+    The minimum number of samples required to split an internal node:    
+    - If int, then consider `min_samples_split` as the minimum number.
+    - If float, then `min_samples_split` is a fraction and `ceil(min_samples_split * n_samples)` are the minimum number of samples for each split.
+      
+- ```min_samples_leaf : int or float, default=1```
+
+    The minimum number of samples required to be at a leaf node.
+    A split point at any depth will only be considered if it leaves at least ``min_samples_leaf`` training samples in each of the left and right branches.  This may have the effect of smoothing the model, especially in regression.
+    - If int, then consider `min_samples_leaf` as the minimum number.
+    - If float, then `min_samples_leaf` is a fraction and `ceil(min_samples_leaf * n_samples)` are the minimum number of samples for each node.
+      
+- ```min_weight_fraction_leaf : float, default=0.0```
+
+    The minimum weighted fraction of the sum total of weights (of all the input samples) required to be at a leaf node. Samples have equal weight when sample_weight is not provided.
+    
+- ```max_features : {"auto", "sqrt", "log2"}, int or float, default="auto"```
+
+    The number of features to consider when looking for the best split:    
+    - If int, then consider `max_features` features at each split.
+    - If float, then `max_features` is a fraction and `round(max_features * n_features)` features are considered at each split.
+    - If "auto", then `max_features=n_features`.
+    - If "sqrt", then `max_features=sqrt(n_features)`.
+    - If "log2", then `max_features=log2(n_features)`.
+    - If None, then `max_features=n_features`.
+    Note: the search for a split does not stop until at least one
+    valid partition of the node samples is found, even if it requires to
+    effectively inspect more than ``max_features`` features.
+    
+- ```max_leaf_nodes : int, default=None```
+
+    Grow trees with ``max_leaf_nodes`` in best-first fashion. Best nodes are defined as relative reduction in impurity. If None then unlimited number of leaf nodes.
+    
+- ```min_impurity_decrease : float, default=0.0```
+
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
+    
+- ```min_impurity_split : float, default=None```
+
+    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.
+    
+- ```bootstrap : bool, default=True```
+
+    Whether bootstrap samples are used when building trees. If False, the whole dataset is used to build each tree.
+    
+- ```oob_score : bool, default=False```
+
+    Whether to use out-of-bag samples to estimate the generalization score. Only available if bootstrap=True.
+    
+- ```n_jobs : int, default=None```
+
+    The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`, :meth:`decision_path` and :meth:`apply` are all parallelized over the trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend` context. ``-1`` means using all processors.
+    
+- ```random_state : int, RandomState instance or None, default=None```
+
+    Controls both the randomness of the bootstrapping of the samples used when building trees (if ``bootstrap=True``) and the sampling of the features to consider when looking for the best split at each node (if ``max_features < n_features``).
+    
+- ```ccp_alpha : non-negative float, default=0.0```
+
+    Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with the largest cost complexity that is smaller than ``ccp_alpha`` will be chosen. By default, no pruning is performed. See :ref:`minimal_cost_complexity_pruning` for details.
+    
+- ```max_samples : int or float, default=None```
+
+    If bootstrap is True, the number of samples to draw from X to train each base estimator.
+    - If None (default), then draw `X.shape[0]` samples.
+    - If int, then draw `max_samples` samples.
+    - If float, then draw `max_samples * X.shape[0]` samples. Thus,
+      `max_samples` should be in the interval `(0, 1)`.
+
+#### Attributes:
+
+- ```n_features_in_ : int```
+
+    The number of features when :meth:`fit` is performed.
+    
+- ```feature_importances_ : ndarray of shape (n_features, )```
+
+    The impurity-based feature importances.
+    The higher, the more important the feature.
+    The importance of a feature is computed as the (normalized) total reduction of the criterion brought by that feature.  It is also known as the Gini importance.
+    
+- ```coef_ : array of shape (n_features, ) or (n_targets, n_features)```
+
+    Estimated coefficients for the linear regression problem. If multiple targets are passed during the fit (y 2D), this is a 2D array of shape (n_targets, n_features), while if only one target is passed, this is a 1D array of length n_features.
+    
+- ```intercept_ : float or array of shape (n_targets,)```
+
+    Independent term in the linear model. Set to 0 if `fit_intercept = False` in `base_estimator`. 
+    
+- ```classes_ : ndarray of shape (n_classes, )```
+
+    A list of class labels known to the classifier. 
+    
+- ```base_estimator_ : object```
+
+    A fitted linear model instance.
+    
+- ```forest_estimator_ : object```
+
+    A fitted random forest instance. 
+    
+#### Methods:
+
+- ```fit(X, y, sample_weight=None)```
+
+    Build a Linear Forest from the training set (X, y).
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The training input samples.  
+    
+    - `y` : array-like of shape (n_samples, ) or (n_samples, n_targets)
+        
+        Target values.
+    
+    - `sample_weight` : array-like of shape (n_samples, ), default=None
+        
+        Sample weights. 
+        
+    **Returns:**
+    
+    - `self` : 
+    
+- ```decision_function(X)```
+
+    Predict confidence scores for samples.
+    The confidence score for a sample is proportional to the signed distance of that sample to the hyperplane.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        Samples.  
+        
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, ).
+    
+        Confidence scores.
+        Confidence score for self.classes_[1] where >0 means this class would be predicted.
+
+- ```predict(X)```
+
+    Predict class for X.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        Samples.  
+        
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, ).
+    
+        The predicted classes.
+        
+- ```predict_proba(X)```
+
+    Predict class probabilities for X.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        Samples.  
+        
+    **Returns:**
+    
+    - `proba` : ndarray of shape (n_samples, n_classes).
+    
+        The class probabilities of the input samples. The order of the classes corresponds to that in the attribute :term:`classes_`.
+        
+- ```predict_log_proba(X)```
+
+    Predict class log-probabilities for X.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        Samples.  
+        
+    **Returns:**
+    
+    - `pred` : ndarray of shape (n_samples, n_classes).
+    
+        The class log-probabilities of the input samples. The order of the classes corresponds to that in the attribute :term:`classes_`.
+        
+- ```apply(X)```
+
+    Apply trees in the forest to X, return leaf indices.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The input samples.  
+        
+    **Returns:**
+    
+    - `X_leaves` : array-like of shape (n_samples, n_estimators).
+    
+        For each datapoint x in X and for each tree in the forest, return the index of the leaf x ends up in.
+        
+- ```decision_path(X)```
+
+    Return the decision path in the forest.
+    
+    **Parameters:**
+    
+    - `X` : array-like of shape (n_samples, n_features)
+        
+        The input samples.  
+        
+    **Returns:**
+    
+    - `indicator` : sparse matrix of shape (n_samples, n_nodes)
+        
+        Return a node indicator matrix where non zero elements indicates that the samples goes through the nodes. The matrix is of CSR format.
+        
+    - `n_nodes_ptr` : ndarray of shape (n_estimators + 1, )
+        
+        The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]] gives the indicator value for the i-th estimator.

@@ -7,6 +7,9 @@ from joblib import Parallel, effective_n_jobs  # , delayed
 
 from sklearn.dummy import DummyClassifier
 from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.ensemble import RandomForestRegressor
+
+from sklearn.base import is_regressor
 from sklearn.base import BaseEstimator, TransformerMixin
 
 from sklearn.utils import check_array
@@ -212,18 +215,10 @@ class _LinearTree(BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-
-    def __init__(self,
-                 base_estimator,
-                 criterion,
-                 max_depth,
-                 min_samples_split,
-                 min_samples_leaf,
-                 max_bins,
-                 categorical_features,
-                 split_features,
-                 linear_features,
-                 n_jobs):
+    def __init__(self, base_estimator, *, criterion, max_depth,
+                 min_samples_split, min_samples_leaf, max_bins,
+                 categorical_features, split_features,
+                 linear_features, n_jobs):
 
         self.base_estimator = base_estimator
         self.criterion = criterion
@@ -854,8 +849,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-
-    def __init__(self, base_estimator, loss, n_estimators,
+    def __init__(self, base_estimator, *, loss, n_estimators,
                  max_depth, min_samples_split, min_samples_leaf,
                  min_weight_fraction_leaf, max_features,
                  random_state, max_leaf_nodes,
@@ -890,9 +884,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             regression).
 
         sample_weight : array-like of shape (n_samples, ), default=None
-            Sample weights. If None, then samples are equally weighted.
-            Note that if the base estimator does not support sample weighting,
-            the sample weights are still used to evaluate the splits.
+            Sample weights.
 
         Returns
         -------
@@ -1007,3 +999,174 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             X = np.concatenate([X, pred_leaves], axis=1)
 
         return X
+
+
+class _LinearForest(BaseEstimator):
+    """Base class for Linear Forest meta-estimator.
+
+    Warning: This class should not be used directly. Use derived classes
+    instead.
+    """
+    def __init__(self, base_estimator, *, n_estimators, max_depth,
+                 min_samples_split, min_samples_leaf, min_weight_fraction_leaf,
+                 max_features, max_leaf_nodes, min_impurity_decrease,
+                 min_impurity_split, bootstrap, oob_score, n_jobs,
+                 random_state, ccp_alpha, max_samples):
+
+        self.base_estimator = base_estimator
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_weight_fraction_leaf = min_weight_fraction_leaf
+        self.max_features = max_features
+        self.max_leaf_nodes = max_leaf_nodes
+        self.min_impurity_decrease = min_impurity_decrease
+        self.min_impurity_split = min_impurity_split
+        self.bootstrap = bootstrap
+        self.oob_score = oob_score
+        self.n_jobs = n_jobs
+        self.random_state = random_state
+        self.ccp_alpha = ccp_alpha
+        self.max_samples = max_samples
+
+    def _sigmoid(self, y):
+        """Expit function (a.k.a. logistic sigmoid).
+
+        Parameters
+        ----------
+        y : array-like of shape (n_samples, )
+            The array to apply expit to element-wise.
+
+        Returns
+        -------
+        y : array-like of shape (n_samples, )
+            Expits.
+        """
+        return np.exp(y) / (1 + np.exp(y))
+
+    def _inv_sigmoid(self, y):
+        """Logit function.
+
+        Parameters
+        ----------
+        y : array-like of shape (n_samples, )
+            The array to apply logit to element-wise.
+
+        Returns
+        -------
+        y : array-like of shape (n_samples, )
+            Logits.
+        """
+        y = y.clip(1e-3, 1 - 1e-3)
+
+        return np.log(y / (1 - y))
+
+    def _fit(self, X, y, sample_weight=None):
+        """Build a Linear Boosting from the training set (X, y).
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+
+        y : array-like of shape (n_samples, ) or also (n_samples, n_targets) for
+            multitarget regression.
+            The target values (class labels in classification, real numbers in
+            regression).
+
+        sample_weight : array-like of shape (n_samples, ), default=None
+            Sample weights.
+
+        Returns
+        -------
+        self : object
+        """
+        if not hasattr(self.base_estimator, 'fit_intercept'):
+            raise ValueError("Only linear models are accepted as base_estimator. "
+                             "Select one from linear_model class of scikit-learn.")
+
+        if not is_regressor(self.base_estimator):
+            raise ValueError("Select a regressor linear model as base_estimator.")
+
+        n_sample, self.n_features_in_ = X.shape
+
+        if hasattr(self, 'classes_'):
+            class_to_int = dict(map(reversed, enumerate(self.classes_)))
+            y = np.array([class_to_int[i] for i in y])
+            y = self._inv_sigmoid(y)
+
+        self.base_estimator_ = deepcopy(self.base_estimator)
+        self.base_estimator_.fit(X, y, sample_weight)
+        resid = y - self.base_estimator_.predict(X)
+
+        self.forest_estimator_ = RandomForestRegressor(
+            n_estimators=self.n_estimators,
+            criterion='mse',
+            max_depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            min_weight_fraction_leaf=self.min_weight_fraction_leaf,
+            max_features=self.max_features,
+            max_leaf_nodes=self.max_leaf_nodes,
+            min_impurity_decrease=self.min_impurity_decrease,
+            min_impurity_split=self.min_impurity_split,
+            bootstrap=self.bootstrap,
+            oob_score=self.oob_score,
+            n_jobs=self.n_jobs,
+            random_state=self.random_state,
+            ccp_alpha=self.ccp_alpha,
+            max_samples=self.max_samples
+        )
+        self.forest_estimator_.fit(X, resid, sample_weight)
+
+        if hasattr(self.base_estimator_, 'coef_'):
+            self.coef_ = self.base_estimator_.coef_
+
+        if hasattr(self.base_estimator_, 'intercept_'):
+            self.intercept_ = self.base_estimator_.intercept_
+
+        self.feature_importances_ = self.forest_estimator_.feature_importances_
+
+        return self
+
+    def apply(self, X):
+        """Apply trees in the forest to X, return leaf indices.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
+
+        Returns
+        -------
+        X_leaves : ndarray of shape (n_samples, n_estimators)
+            For each datapoint x in X and for each tree in the forest,
+            return the index of the leaf x ends up in.
+        """
+        check_is_fitted(self, attributes='base_estimator_')
+
+        return self.forest_estimator_.apply(X)
+
+    def decision_path(self, X):
+        """Return the decision path in the forest.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The input samples.
+
+        Returns
+        -------
+        indicator : sparse matrix of shape (n_samples, n_nodes)
+            Return a node indicator matrix where non zero elements indicates
+            that the samples goes through the nodes. The matrix is of CSR
+            format.
+
+        n_nodes_ptr : ndarray of shape (n_estimators + 1, )
+            The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]]
+            gives the indicator value for the i-th estimator.
+        """
+        check_is_fitted(self, attributes='base_estimator_')
+
+        return self.forest_estimator_.decision_path(X)

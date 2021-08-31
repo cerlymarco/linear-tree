@@ -1,13 +1,17 @@
 # linear-tree
 A python library to build Model Trees with Linear Models at the leaves.
 
+linear-tree provides also the implementations of _LinearForest_ and _LinearBoost_ inspired from [these works](https://github.com/cerlymarco/linear-tree#references).
+
 ## Overview
 **Linear Trees** combine the learning ability of Decision Tree with the predictive and explicative power of Linear Models. 
 Like in tree-based algorithms, the data are split according to simple decision rules. The goodness of slits is evaluated in gain terms fitting Linear Models in the nodes. This implies that the models in the leaves are linear instead of constant approximations like in classical Decision Trees. 
 
-**Linear Boosting**, available in linear-tree package, is a two stage learning process. Firstly, a linear model is trained on the initial dataset to obtains predictions. Secondly, the residuals of the previous step are modeled with a decision tree using all the available features. The tree identifies the path leading to highest error (i.e. the worst leaf). The leaf contributing to the error the most is used to generate a new binary feature to be used in the first stage. The iterations continue until a certain stopping criterion is met.
+**Linear Forests** generalizes the well known Random Forests by combining Linear Models with the same Random Forests. The key idea is to use the strength of Linear Models to improve the nonparametric learning ability of tree-based algorithms. Firstly, a Linear Model is fitted on the whole dataset, then a Random Forest is trained on the same dataset but using the residuals of the previous steps as target. The final predictions are the sum of the raw linear predictions and the residuals modeled by the Random Forest.
 
-**linear-tree is developed to be fully integrable with scikit-learn**. ```LinearTreeRegressor``` and ```LinearTreeClassifier``` are provided as scikit-learn _BaseEstimator_. They are wrappers that build a decision tree on the data fitting a linear estimator from ```sklearn.linear_model```. ```LinearBoostRegressor``` and ```LinearBoostClassifier``` are available also as _TransformerMixin_ in order to be integrated, in any pipeline, also for  automated features engineering. All the models available in [sklearn.linear_model](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model) can be used as base learner. 
+**Linear Boosting** is a two stage learning process. Firstly, a linear model is trained on the initial dataset to obtains predictions. Secondly, the residuals of the previous step are modeled with a decision tree using all the available features. The tree identifies the path leading to highest error (i.e. the worst leaf). The leaf contributing to the error the most is used to generate a new binary feature to be used in the first stage. The iterations continue until a certain stopping criterion is met.
+
+**linear-tree is developed to be fully integrable with scikit-learn**. ```LinearTreeRegressor``` and ```LinearTreeClassifier``` are provided as scikit-learn _BaseEstimator_ to build a decision tree using linear estimators. ```LinearForestRegressor``` and ```LinearForestClassifier``` use the _RandomForest_ from sklearn to model residuals. ```LinearBoostRegressor``` and ```LinearBoostClassifier``` are available also as _TransformerMixin_ in order to be integrated, in any pipeline, also for  automated features engineering. All the models available in [sklearn.linear_model](https://scikit-learn.org/stable/modules/classes.html#module-sklearn.linear_model) can be used as base learner. 
 
 ## Installation
 ```shell
@@ -42,6 +46,28 @@ X, y = make_classification(n_samples=100, n_features=4,
                            n_informative=2, n_redundant=0,
                            random_state=0, shuffle=False)
 clf = LinearTreeClassifier(base_estimator=RidgeClassifier())
+clf.fit(X, y)
+```
+##### Linear Forest Regression
+```python
+from sklearn.linear_model import LinearRegression
+from lineartree import LinearForestRegressor
+from sklearn.datasets import make_regression
+X, y = make_regression(n_samples=100, n_features=4,
+                       n_informative=2, n_targets=1,
+                       random_state=0, shuffle=False)
+regr = LinearForestRegressor(base_estimator=LinearRegression())
+regr.fit(X, y)
+```
+##### Linear Forest Classification
+```python
+from sklearn.linear_model import LinearRegression
+from lineartree import LinearForestClassifier
+from sklearn.datasets import make_classification
+X, y = make_classification(n_samples=100, n_features=4,
+                           n_informative=2, n_redundant=0,
+                           random_state=0, shuffle=False)
+clf = LinearForestClassifier(base_estimator=LinearRegression())
 clf.fit(X, y)
 ```
 ##### Linear Boosting Regression
@@ -88,7 +114,14 @@ Extract and examine coefficients at the leaves:
 
 ![leaf coefficients](https://raw.githubusercontent.com/cerlymarco/linear-tree/master/imgs/leaf_coefficients.png)
 
-Impact of the features automatically generated with linear boosting:
+Impact of the features automatically generated with Linear Boosting:
 
 ![linear_boost_importances](https://raw.githubusercontent.com/cerlymarco/linear-tree/master/imgs/linear_boost_importances.png)
 
+Comparing predictions of Linear Forest and Random Forest:
+
+![linear_forest_predictions](https://raw.githubusercontent.com/cerlymarco/linear-tree/master/imgs/linear_forest_predictions.png)
+
+## References
+- Regression-Enhanced Random Forests. Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
+- Explainable boosted linear regression for time series forecasting. Igor Ilic, Berk Gorgulu, Mucahit Cevik, Mustafa Gokce Baydogan.
