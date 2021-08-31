@@ -706,6 +706,7 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
     - If "sqrt", then `max_features=sqrt(n_features)`.
     - If "log2", then `max_features=log2(n_features)`.
     - If None, then `max_features=n_features`.
+    
     Note: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than ``max_features`` features.  
   
 - ```max_leaf_nodes : int, default=None```
@@ -851,10 +852,9 @@ class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_
     - If "auto", then `max_features=n_features`.
     - If "sqrt", then `max_features=sqrt(n_features)`.
     - If "log2", then `max_features=log2(n_features)`.
-    - If None, then `max_features=n_features`.
-    Note: the search for a split does not stop until at least one
-    valid partition of the node samples is found, even if it requires to
-    effectively inspect more than ``max_features`` features.
+    - If None, then `max_features=n_features`
+    
+    Note: the search for a split does not stop until at least one valid partition of the node samples is found, even if it requires to effectively inspect more than ``max_features`` features.
     
 - ```max_leaf_nodes : int, default=None```
 
