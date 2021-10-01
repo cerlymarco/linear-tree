@@ -566,10 +566,6 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value.
 
-    min_impurity_split : float, default=0
-        Threshold for early stopping in tree growth. A node will split
-        if its impurity is above the threshold, otherwise it is a leaf.
-
     ccp_alpha : non-negative float, default=0.0
         Complexity parameter used for Minimal Cost-Complexity Pruning. The
         subtree with the largest cost complexity that is smaller than
@@ -619,8 +615,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
-                 min_impurity_decrease=0.0, min_impurity_split=None,
-                 ccp_alpha=0.0):
+                 min_impurity_decrease=0.0, ccp_alpha=0.0):
 
         self.base_estimator = base_estimator
         self.loss = loss
@@ -633,7 +628,6 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
         self.random_state = random_state
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.ccp_alpha = ccp_alpha
 
     def fit(self, X, y, sample_weight=None):
@@ -777,10 +771,6 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value.
 
-    min_impurity_split : float, default=0
-        Threshold for early stopping in tree growth. A node will split
-        if its impurity is above the threshold, otherwise it is a leaf.
-
     ccp_alpha : non-negative float, default=0.0
         Complexity parameter used for Minimal Cost-Complexity Pruning. The
         subtree with the largest cost complexity that is smaller than
@@ -830,8 +820,7 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
-                 min_impurity_decrease=0.0, min_impurity_split=None,
-                 ccp_alpha=0.0):
+                 min_impurity_decrease=0.0, ccp_alpha=0.0):
 
         self.base_estimator = base_estimator
         self.loss = loss
@@ -844,7 +833,6 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         self.random_state = random_state
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.ccp_alpha = ccp_alpha
 
     def fit(self, X, y, sample_weight=None):
@@ -1039,10 +1027,6 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value.
 
-    min_impurity_split : float, default=None
-        Threshold for early stopping in tree growth. A node will split
-        if its impurity is above the threshold, otherwise it is a leaf.
-
     bootstrap : bool, default=True
         Whether bootstrap samples are used when building trees. If False, the
         whole dataset is used to build each tree.
@@ -1076,7 +1060,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         - If None (default), then draw `X.shape[0]` samples.
         - If int, then draw `max_samples` samples.
         - If float, then draw `max_samples * X.shape[0]` samples. Thus,
-          `max_samples` should be in the interval `(0, 1)`.
+          `max_samples` should be in the interval `(0, 1]`.
 
     Attributes
     ----------
@@ -1129,9 +1113,8 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
-                 min_impurity_split=None, bootstrap=True,
-                 oob_score=False, n_jobs=None, random_state=None,
-                 ccp_alpha=0.0, max_samples=None):
+                 bootstrap=True, oob_score=False, n_jobs=None,
+                 random_state=None, ccp_alpha=0.0, max_samples=None):
 
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
@@ -1142,7 +1125,6 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         self.max_features = max_features
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.bootstrap = bootstrap
         self.oob_score = oob_score
         self.n_jobs = n_jobs
@@ -1351,10 +1333,6 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         A node will be split if this split induces a decrease of the impurity
         greater than or equal to this value.
 
-    min_impurity_split : float, default=None
-        Threshold for early stopping in tree growth. A node will split
-        if its impurity is above the threshold, otherwise it is a leaf.
-
     bootstrap : bool, default=True
         Whether bootstrap samples are used when building trees. If False, the
         whole dataset is used to build each tree.
@@ -1388,7 +1366,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         - If None (default), then draw `X.shape[0]` samples.
         - If int, then draw `max_samples` samples.
         - If float, then draw `max_samples * X.shape[0]` samples. Thus,
-          `max_samples` should be in the interval `(0, 1)`.
+          `max_samples` should be in the interval `(0, 1]`.
 
     Attributes
     ----------
@@ -1437,14 +1415,12 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
     Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
     (https://arxiv.org/abs/1904.10416)
     """
-
     def __init__(self, base_estimator, *, n_estimators=100,
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
-                 min_impurity_split=None, bootstrap=True,
-                 oob_score=False, n_jobs=None, random_state=None,
-                 ccp_alpha=0.0, max_samples=None):
+                 bootstrap=True, oob_score=False, n_jobs=None,
+                 random_state=None, ccp_alpha=0.0, max_samples=None):
 
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
@@ -1455,7 +1431,6 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         self.max_features = max_features
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.bootstrap = bootstrap
         self.oob_score = oob_score
         self.n_jobs = n_jobs

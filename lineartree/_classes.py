@@ -6,7 +6,7 @@ from copy import deepcopy
 from joblib import Parallel, effective_n_jobs  # , delayed
 
 from sklearn.dummy import DummyClassifier
-from sklearn.tree import DecisionTreeRegressor, DecisionTreeClassifier
+from sklearn.tree import DecisionTreeRegressor
 from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.base import is_regressor
@@ -18,6 +18,9 @@ from sklearn.utils.validation import has_fit_parameter, check_is_fitted
 from ._criterion import SCORING
 from ._criterion import mse, rmse, mae, poisson
 from ._criterion import hamming, crossentropy
+
+import sklearn
+_sklearn_v1 = eval(sklearn.__version__.split('.')[0]) > 0
 
 
 CRITERIA = {"mse": mse,
@@ -853,8 +856,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
                  max_depth, min_samples_split, min_samples_leaf,
                  min_weight_fraction_leaf, max_features,
                  random_state, max_leaf_nodes,
-                 min_impurity_decrease, min_impurity_split,
-                 ccp_alpha):
+                 min_impurity_decrease, ccp_alpha):
 
         self.base_estimator = base_estimator
         self.loss = loss
@@ -867,7 +869,6 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         self.random_state = random_state
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.ccp_alpha = ccp_alpha
 
     def _fit(self, X, y, sample_weight=None):
@@ -918,47 +919,33 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             else:
                 resid = SCORING[self.loss](y, pred)
 
-            if self.loss == 'hamming':
-                tree = DecisionTreeClassifier(
-                    criterion='gini', max_depth=self.max_depth,
-                    min_samples_split=self.min_samples_split,
-                    min_samples_leaf=self.min_samples_leaf,
-                    min_weight_fraction_leaf=self.min_weight_fraction_leaf,
-                    max_features=self.max_features,
-                    random_state=self.random_state,
-                    max_leaf_nodes=self.max_leaf_nodes,
-                    min_impurity_decrease=self.min_impurity_decrease,
-                    min_impurity_split=self.min_impurity_split,
-                    ccp_alpha=self.ccp_alpha
-                )
-            else:
-                tree = DecisionTreeRegressor(
-                    criterion='mse', max_depth=self.max_depth,
-                    min_samples_split=self.min_samples_split,
-                    min_samples_leaf=self.min_samples_leaf,
-                    min_weight_fraction_leaf=self.min_weight_fraction_leaf,
-                    max_features=self.max_features,
-                    random_state=self.random_state,
-                    max_leaf_nodes=self.max_leaf_nodes,
-                    min_impurity_decrease=self.min_impurity_decrease,
-                    min_impurity_split=self.min_impurity_split,
-                    ccp_alpha=self.ccp_alpha
-                )
+            if resid.ndim > 1:
+                resid = resid.mean(1)
+
+            criterion = 'squared_error' if _sklearn_v1 else 'mse'
+
+            tree = DecisionTreeRegressor(
+                criterion=criterion, max_depth=self.max_depth,
+                min_samples_split=self.min_samples_split,
+                min_samples_leaf=self.min_samples_leaf,
+                min_weight_fraction_leaf=self.min_weight_fraction_leaf,
+                max_features=self.max_features,
+                random_state=self.random_state,
+                max_leaf_nodes=self.max_leaf_nodes,
+                min_impurity_decrease=self.min_impurity_decrease,
+                ccp_alpha=self.ccp_alpha
+            )
 
             tree.fit(X, resid, sample_weight=sample_weight, check_input=False)
             self._trees.append(tree)
 
-            impurity = tree.tree_.impurity
-            pred_leaves = tree.apply(X, check_input=False)
-            leaves = np.unique(pred_leaves)
+            pred_tree = np.abs(tree.predict(X, check_input=False))
+            worst_pred = np.max(pred_tree)
+            self._leaves.append(worst_pred)
 
-            worst_leaf = np.argmax([impurity[l] for l in leaves])
-            worst_leaf = leaves[worst_leaf]
-            self._leaves.append(worst_leaf)
-
-            pred_leaves = (pred_leaves == worst_leaf).astype(np.float32)
-            pred_leaves = pred_leaves.reshape(-1, 1)
-            X = np.concatenate([X, pred_leaves], axis=1)
+            pred_tree = (pred_tree == worst_pred).astype(np.float32)
+            pred_tree = pred_tree.reshape(-1, 1)
+            X = np.concatenate([X, pred_tree], axis=1)
 
         self.base_estimator_ = deepcopy(self.base_estimator)
         self.base_estimator_.fit(X, y, sample_weight=sample_weight)
@@ -993,10 +980,10 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         self._check_n_features(X, reset=False)
 
         for tree, leaf in zip(self._trees, self._leaves):
-            pred_leaves = tree.apply(X, check_input=False)
-            pred_leaves = (pred_leaves == leaf).astype(np.float32)
-            pred_leaves = pred_leaves.reshape(-1, 1)
-            X = np.concatenate([X, pred_leaves], axis=1)
+            pred_tree = np.abs(tree.predict(X, check_input=False))
+            pred_tree = (pred_tree == leaf).astype(np.float32)
+            pred_tree = pred_tree.reshape(-1, 1)
+            X = np.concatenate([X, pred_tree], axis=1)
 
         return X
 
@@ -1010,8 +997,8 @@ class _LinearForest(BaseEstimator):
     def __init__(self, base_estimator, *, n_estimators, max_depth,
                  min_samples_split, min_samples_leaf, min_weight_fraction_leaf,
                  max_features, max_leaf_nodes, min_impurity_decrease,
-                 min_impurity_split, bootstrap, oob_score, n_jobs,
-                 random_state, ccp_alpha, max_samples):
+                 bootstrap, oob_score, n_jobs, random_state,
+                 ccp_alpha, max_samples):
 
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
@@ -1022,7 +1009,6 @@ class _LinearForest(BaseEstimator):
         self.max_features = max_features
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
-        self.min_impurity_split = min_impurity_split
         self.bootstrap = bootstrap
         self.oob_score = oob_score
         self.n_jobs = n_jobs
@@ -1100,9 +1086,11 @@ class _LinearForest(BaseEstimator):
         self.base_estimator_.fit(X, y, sample_weight)
         resid = y - self.base_estimator_.predict(X)
 
+        criterion = 'squared_error' if _sklearn_v1 else 'mse'
+
         self.forest_estimator_ = RandomForestRegressor(
             n_estimators=self.n_estimators,
-            criterion='mse',
+            criterion=criterion,
             max_depth=self.max_depth,
             min_samples_split=self.min_samples_split,
             min_samples_leaf=self.min_samples_leaf,
@@ -1110,7 +1098,6 @@ class _LinearForest(BaseEstimator):
             max_features=self.max_features,
             max_leaf_nodes=self.max_leaf_nodes,
             min_impurity_decrease=self.min_impurity_decrease,
-            min_impurity_split=self.min_impurity_split,
             bootstrap=self.bootstrap,
             oob_score=self.oob_score,
             n_jobs=self.n_jobs,

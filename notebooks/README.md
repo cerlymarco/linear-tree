@@ -512,7 +512,7 @@ class lineartree.LinearTreeClassifier(base_estimator, *, criterion = 'hamming', 
         
 ## LinearBoostRegressor
 ```
-class lineartree.LinearBoostRegressor(base_estimator, *, loss = 'linear', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
+class lineartree.LinearBoostRegressor(base_estimator, *, loss = 'linear', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, ccp_alpha = 0.0)
 ```
 
 #### Parameters:
@@ -571,10 +571,6 @@ class lineartree.LinearBoostRegressor(base_estimator, *, loss = 'linear', n_esti
 - ```min_impurity_decrease : float, default=0.0```
   
     A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
-  
-- ```min_impurity_split : float, default=0```
-
-    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.  
   
 - ```ccp_alpha : non-negative float, default=0.0```
 
@@ -658,7 +654,7 @@ class lineartree.LinearBoostRegressor(base_estimator, *, loss = 'linear', n_esti
         
 ## LinearBoostClassifier
 ```
-class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, min_impurity_split = 0, ccp_alpha = 0.0)
+class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estimators = 10, max_depth = 3, min_samples_split = 2, min_samples_leaf = 1, min_weight_fraction_leaf = 0.0, max_features = None, random_state = None, max_leaf_nodes = None, min_impurity_decrease = 0.0, ccp_alpha = 0.0)
 ```
 
 #### Parameters:
@@ -718,11 +714,7 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
 - ```min_impurity_decrease : float, default=0.0```
   
     A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
-  
-- ```min_impurity_split : float, default=0```
 
-    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.  
-  
 - ```ccp_alpha : non-negative float, default=0.0```
 
     Complexity parameter used for Minimal Cost-Complexity Pruning. The subtree with the largest cost complexity that is smaller than ``ccp_alpha`` will be chosen. By default, no pruning is performed. See :ref:`minimal_cost_complexity_pruning` for details.  
@@ -809,7 +801,7 @@ class lineartree.LinearBoostClassifier(base_estimator, loss = 'hamming', n_estim
         
 ## LinearForestRegressor
 ```
-class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
+class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
 ```
 
 #### Parameters:
@@ -863,11 +855,7 @@ class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_
 - ```min_impurity_decrease : float, default=0.0```
 
     A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
-    
-- ```min_impurity_split : float, default=None```
 
-    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.
-    
 - ```bootstrap : bool, default=True```
 
     Whether bootstrap samples are used when building trees. If False, the whole dataset is used to build each tree.
@@ -894,7 +882,7 @@ class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_
     - If None (default), then draw `X.shape[0]` samples.
     - If int, then draw `max_samples` samples.
     - If float, then draw `max_samples * X.shape[0]` samples. Thus,
-      `max_samples` should be in the interval `(0, 1)`.
+      `max_samples` should be in the interval `(0, 1]`.
 
 #### Attributes:
 
@@ -1002,7 +990,7 @@ class lineartree.LinearForestRegressor(base_estimator, *, n_estimators=100, max_
 
 ## LinearForestClassifier
 ```
-class lineartree.LinearForestClassifier(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., min_impurity_split=None, bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
+class lineartree.LinearForestClassifier(base_estimator, *, n_estimators=100, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0., max_features="auto", max_leaf_nodes=None, min_impurity_decrease=0., bootstrap=True, oob_score=False, n_jobs=None, random_state=None, ccp_alpha=0.0, max_samples=None)
 ```
 
 #### Parameters:
@@ -1058,10 +1046,6 @@ class lineartree.LinearForestClassifier(base_estimator, *, n_estimators=100, max
 
     A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
     
-- ```min_impurity_split : float, default=None```
-
-    Threshold for early stopping in tree growth. A node will split if its impurity is above the threshold, otherwise it is a leaf.
-    
 - ```bootstrap : bool, default=True```
 
     Whether bootstrap samples are used when building trees. If False, the whole dataset is used to build each tree.
@@ -1088,7 +1072,7 @@ class lineartree.LinearForestClassifier(base_estimator, *, n_estimators=100, max
     - If None (default), then draw `X.shape[0]` samples.
     - If int, then draw `max_samples` samples.
     - If float, then draw `max_samples * X.shape[0]` samples. Thus,
-      `max_samples` should be in the interval `(0, 1)`.
+      `max_samples` should be in the interval `(0, 1]`.
 
 #### Attributes:
 
