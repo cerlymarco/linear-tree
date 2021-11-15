@@ -55,6 +55,10 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
           `ceil(min_samples_leaf * n_samples)` are the minimum
           number of samples for each node.
 
+    min_impurity_decrease : float, default=0.0
+        A node will be split if this split induces a decrease of the impurity
+        greater than or equal to this value.
+
     max_bins : int, default=25
         The maximum number of bins to use to search the optimal split in each
         feature. Features with a small number of unique values may use less than
@@ -120,7 +124,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
     array([8.8817842e-16])
     """
     def __init__(self, base_estimator, *, criterion='mse', max_depth=5,
-                 min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
+                 min_samples_split=6, min_samples_leaf=0.1, min_impurity_decrease=0.0, max_bins=25,
                  categorical_features=None, split_features=None,
                  linear_features=None, n_jobs=None):
 
@@ -129,6 +133,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
+        self.min_impurity_decrease = min_impurity_decrease
         self.max_bins = max_bins
         self.categorical_features = categorical_features
         self.split_features = split_features

@@ -219,7 +219,7 @@ class _LinearTree(BaseEstimator):
     instead.
     """
     def __init__(self, base_estimator, *, criterion, max_depth,
-                 min_samples_split, min_samples_leaf, max_bins,
+                 min_samples_split, min_samples_leaf, min_impurity_decrease, max_bins,
                  categorical_features, split_features,
                  linear_features, n_jobs):
 
@@ -227,6 +227,7 @@ class _LinearTree(BaseEstimator):
         self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
+        self.min_impurity_decrease = min_impurity_decrease
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
         self.categorical_features = categorical_features
@@ -301,7 +302,7 @@ class _LinearTree(BaseEstimator):
 
         # select best results
         _id_best = np.argmin(_losses)
-        if _losses[_id_best] < loss:
+        if loss - _losses[_id_best] > self.min_impurity_decrease:
             split_t = split_t[_id_best]
             split_col = split_col[_id_best]
             left_node = left_node[_id_best]
