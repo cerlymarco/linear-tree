@@ -25,6 +25,7 @@ The module depends on NumPy, SciPy and Scikit-Learn (>=0.23.0). Python 3.6 or ab
 - [Explainable AI with Linear Trees](https://towardsdatascience.com/explainable-ai-with-linear-trees-7e30a6f067d7)
 - [Improve Linear Regression for Time Series Forecasting](https://towardsdatascience.com/improve-linear-regression-for-time-series-forecasting-e36f3c3e3534#a80b-b6010ccb1c21)
 - [Linear Boosting with Automated Features Engineering](https://towardsdatascience.com/linear-boosting-with-automated-features-engineering-894962c3ba84)
+- [Improve Random Forest with Linear Models](https://towardsdatascience.com/improve-random-forest-with-linear-models-1fa789691e18)
 
 ## Usage
 ##### Linear Tree Regression
