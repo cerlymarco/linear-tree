@@ -11,8 +11,6 @@ from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.base import is_regressor
 from sklearn.base import BaseEstimator, TransformerMixin
-
-from sklearn.utils import check_array
 from sklearn.utils.validation import has_fit_parameter, check_is_fitted
 
 from ._criterion import SCORING
@@ -123,7 +121,6 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                     model_right = DummyClassifier(strategy="most_frequent")
 
             if weights is None:
-
                 model_left.fit(X[left_mesh], y[~mask])
                 loss_left = feval(model_left, X[left_mesh], y[~mask],
                                   **largs_left)
@@ -135,9 +132,7 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                 wloss_right = loss_right * (n_right / n_sample)
 
             else:
-
                 if support_sample_weight:
-
                     model_left.fit(X[left_mesh], y[~mask],
                                    sample_weight=weights[~mask])
 
@@ -145,7 +140,6 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                                     sample_weight=weights[mask])
 
                 else:
-
                     model_left.fit(X[left_mesh], y[~mask])
 
                     model_right.fit(X[right_mesh], y[mask])
@@ -400,9 +394,7 @@ class _LinearTree(BaseEstimator):
                 self._leaves[queue[-1]] = self._nodes[queue[-1]]
                 del self._nodes[queue[-1]]
                 queue.pop()
-
             else:
-
                 model_left, loss_left, wloss_left, n_left, class_left = \
                     left_node
                 model_right, loss_right, wloss_right, n_right, class_right = \
@@ -700,10 +692,16 @@ class _LinearTree(BaseEstimator):
         """
         check_is_fitted(self, attributes='_nodes')
 
-        X = check_array(
-            X, accept_sparse=False, dtype=None,
-            force_all_finite=False)
-        self._check_n_features(X, reset=False)
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         X_leaves = np.zeros(X.shape[0], dtype='int64')
 
@@ -733,10 +731,16 @@ class _LinearTree(BaseEstimator):
         """
         check_is_fitted(self, attributes='_nodes')
 
-        X = check_array(
-            X, accept_sparse=False, dtype=None,
-            force_all_finite=False)
-        self._check_n_features(X, reset=False)
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         indicator = np.zeros((X.shape[0], self.node_count), dtype='int64')
 
@@ -976,8 +980,17 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             `n_out` is equal to `n_features` + `n_estimators`
         """
         check_is_fitted(self, attributes='base_estimator_')
-        X = check_array(X, dtype=np.float32, accept_sparse=False)
-        self._check_n_features(X, reset=False)
+
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         for tree, leaf in zip(self._trees, self._leaves):
             pred_tree = np.abs(tree.predict(X, check_input=False))

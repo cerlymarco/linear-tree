@@ -1,8 +1,6 @@
 import numpy as np
 
 from sklearn.base import ClassifierMixin, RegressorMixin
-
-from sklearn.utils import check_array
 from sklearn.utils.validation import check_is_fitted, _check_sample_weight
 
 from ._classes import _predict_branch
@@ -164,11 +162,18 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
 
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
-            X, y, accept_sparse=False, dtype=None,
-            force_all_finite=False, multi_output=True
+            X, y,
+            reset=True,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=True,
+            y_numeric=True,
         )
         if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
+            sample_weight = _check_sample_weight(sample_weight, X)
 
         y_shape = np.shape(y)
         self.n_targets_ = y_shape[1] if len(y_shape) > 1 else 1
@@ -194,10 +199,16 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         """
         check_is_fitted(self, attributes='_nodes')
 
-        X = check_array(
-            X, accept_sparse=False, dtype=None,
-            force_all_finite=False)
-        self._check_n_features(X, reset=False)
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         if self.n_targets_ > 1:
             pred = np.zeros((X.shape[0], self.n_targets_))
@@ -378,11 +389,17 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
 
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
-            X, y, accept_sparse=False, dtype=None,
-            force_all_finite=False, multi_output=False
+            X, y,
+            reset=True,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=False,
         )
         if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
+            sample_weight = _check_sample_weight(sample_weight, X)
 
         self.classes_ = np.unique(y)
         self._fit(X, y, sample_weight)
@@ -404,10 +421,16 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         """
         check_is_fitted(self, attributes='_nodes')
 
-        X = check_array(
-            X, accept_sparse=False, dtype=None,
-            force_all_finite=False)
-        self._check_n_features(X, reset=False)
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         pred = np.empty(X.shape[0], dtype=self.classes_.dtype)
 
@@ -440,10 +463,16 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         """
         check_is_fitted(self, attributes='_nodes')
 
-        X = check_array(
-            X, accept_sparse=False, dtype=None,
-            force_all_finite=False)
-        self._check_n_features(X, reset=False)
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         pred = np.zeros((X.shape[0], len(self.classes_)))
 
@@ -656,10 +685,18 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
 
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
-            X, y, accept_sparse=False, dtype=np.float32,
-            multi_output=True)
+            X, y,
+            reset=True,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=True,
+            y_numeric=True,
+        )
         if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
+            sample_weight = _check_sample_weight(sample_weight, X)
 
         y_shape = np.shape(y)
         n_targets = y_shape[1] if len(y_shape) > 1 else 1
@@ -866,10 +903,17 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
 
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
-            X, y, accept_sparse=False, dtype=np.float32,
-            multi_output=False)
+            X, y,
+            reset=True,
+            accept_sparse=False,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=False,
+        )
         if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
+            sample_weight = _check_sample_weight(sample_weight, X)
 
         self.classes_ = np.unique(y)
         self._fit(X, y, sample_weight)
@@ -928,320 +972,6 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
 
         If base estimators do not implement a ``predict_log_proba`` method,
         then the logarithm of the one-hot encoded predicted class is returned.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Samples.
-
-        Returns
-        -------
-        pred : ndarray of shape (n_samples, n_classes)
-            The class log-probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
-        """
-        return np.log(self.predict_proba(X))
-
-
-class LinearForestClassifier(_LinearForest, ClassifierMixin):
-    """"A Linear Forest Classifier.
-
-    Linear forests generalizes the well known random forests by combining
-    linear models with the same random forests.
-    The key idea of linear forests is to use the strength of linear models
-    to improve the nonparametric learning ability of tree-based algorithms.
-    Firstly, a linear model is fitted on the whole dataset, then a random
-    forest is trained on the same dataset but using the residuals of the
-    previous steps as target. The final predictions are the sum of the raw
-    linear predictions and the residuals modeled by the random forest.
-
-    For classification tasks the same approach used in regression context
-    is adopted. The binary targets are transformed into logits using the
-    inverse sigmoid function. A linear regression is fitted. A random forest
-    regressor is trained to approximate the residulas from logits and linear
-    predictions. Finally the sigmoid of the combinded predictions are taken
-    to obtain probabilities.
-    The multi-label scenario is carried out using OneVsRestClassifier.
-
-    Parameters
-    ----------
-    base_estimator : object
-        The linear estimator fitted on the raw target.
-        The linear estimator must be a regressor from sklearn.linear_model.
-
-    n_estimators : int, default=100
-        The number of trees in the forest.
-
-    max_depth : int, default=None
-        The maximum depth of the tree. If None, then nodes are expanded until
-        all leaves are pure or until all leaves contain less than
-        min_samples_split samples.
-
-    min_samples_split : int or float, default=2
-        The minimum number of samples required to split an internal node:
-
-        - If int, then consider `min_samples_split` as the minimum number.
-        - If float, then `min_samples_split` is a fraction and
-          `ceil(min_samples_split * n_samples)` are the minimum
-          number of samples for each split.
-
-    min_samples_leaf : int or float, default=1
-        The minimum number of samples required to be at a leaf node.
-        A split point at any depth will only be considered if it leaves at
-        least ``min_samples_leaf`` training samples in each of the left and
-        right branches.  This may have the effect of smoothing the model,
-        especially in regression.
-
-        - If int, then consider `min_samples_leaf` as the minimum number.
-        - If float, then `min_samples_leaf` is a fraction and
-          `ceil(min_samples_leaf * n_samples)` are the minimum
-          number of samples for each node.
-
-    min_weight_fraction_leaf : float, default=0.0
-        The minimum weighted fraction of the sum total of weights (of all
-        the input samples) required to be at a leaf node. Samples have
-        equal weight when sample_weight is not provided.
-
-    max_features : {"auto", "sqrt", "log2"}, int or float, default="auto"
-        The number of features to consider when looking for the best split:
-
-        - If int, then consider `max_features` features at each split.
-        - If float, then `max_features` is a fraction and
-          `round(max_features * n_features)` features are considered at each
-          split.
-        - If "auto", then `max_features=n_features`.
-        - If "sqrt", then `max_features=sqrt(n_features)`.
-        - If "log2", then `max_features=log2(n_features)`.
-        - If None, then `max_features=n_features`.
-
-        Note: the search for a split does not stop until at least one
-        valid partition of the node samples is found, even if it requires to
-        effectively inspect more than ``max_features`` features.
-
-    max_leaf_nodes : int, default=None
-        Grow trees with ``max_leaf_nodes`` in best-first fashion.
-        Best nodes are defined as relative reduction in impurity.
-        If None then unlimited number of leaf nodes.
-
-    min_impurity_decrease : float, default=0.0
-        A node will be split if this split induces a decrease of the impurity
-        greater than or equal to this value.
-
-    bootstrap : bool, default=True
-        Whether bootstrap samples are used when building trees. If False, the
-        whole dataset is used to build each tree.
-
-    oob_score : bool, default=False
-        Whether to use out-of-bag samples to estimate the generalization score.
-        Only available if bootstrap=True.
-
-    n_jobs : int, default=None
-        The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`,
-        :meth:`decision_path` and :meth:`apply` are all parallelized over the
-        trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend`
-        context. ``-1`` means using all processors.
-
-    random_state : int, RandomState instance or None, default=None
-        Controls both the randomness of the bootstrapping of the samples used
-        when building trees (if ``bootstrap=True``) and the sampling of the
-        features to consider when looking for the best split at each node
-        (if ``max_features < n_features``).
-
-    ccp_alpha : non-negative float, default=0.0
-        Complexity parameter used for Minimal Cost-Complexity Pruning. The
-        subtree with the largest cost complexity that is smaller than
-        ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
-        :ref:`minimal_cost_complexity_pruning` for details.
-
-    max_samples : int or float, default=None
-        If bootstrap is True, the number of samples to draw from X
-        to train each base estimator.
-
-        - If None (default), then draw `X.shape[0]` samples.
-        - If int, then draw `max_samples` samples.
-        - If float, then draw `max_samples * X.shape[0]` samples. Thus,
-          `max_samples` should be in the interval `(0, 1]`.
-
-    Attributes
-    ----------
-    n_features_in_ : int
-        The number of features when :meth:`fit` is performed.
-
-    feature_importances_ : ndarray of shape (n_features, )
-        The impurity-based feature importances.
-        The higher, the more important the feature.
-        The importance of a feature is computed as the (normalized)
-        total reduction of the criterion brought by that feature.  It is also
-        known as the Gini importance.
-
-    coef_ : ndarray of shape (1, n_features_out_)
-        Coefficient of the features in the decision function.
-
-    intercept_ : float
-        Independent term in the linear model. Set to 0 if `fit_intercept = False`
-        in `base_estimator`.
-
-    classes_ : ndarray of shape (n_classes, )
-        A list of class labels known to the classifier.
-
-    base_estimator_ : object
-        A fitted linear model instance.
-
-    forest_estimator_ : object
-        A fitted random forest instance.
-
-    Examples
-    --------
-    >>> from sklearn.linear_model import LinearRegression
-    >>> from lineartree import LinearForestClassifier
-    >>> from sklearn.datasets import make_classification
-    >>> X, y = make_classification(n_samples=100, n_classes=2, n_features=4,
-    ...                            n_informative=2, n_redundant=0,
-    ...                            random_state=0, shuffle=False)
-    >>> clf = LinearForestClassifier(base_estimator=LinearRegression())
-    >>> clf.fit(X, y)
-    >>> clf.predict([[0, 0, 0, 0]])
-    array([1])
-
-    References
-    ----------
-    Regression-Enhanced Random Forests.
-    Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
-    (https://arxiv.org/abs/1904.10416)
-    """
-    def __init__(self, base_estimator, *, n_estimators=100,
-                 max_depth=None, min_samples_split=2, min_samples_leaf=1,
-                 min_weight_fraction_leaf=0., max_features="auto",
-                 max_leaf_nodes=None, min_impurity_decrease=0.,
-                 bootstrap=True, oob_score=False, n_jobs=None,
-                 random_state=None, ccp_alpha=0.0, max_samples=None):
-
-        self.base_estimator = base_estimator
-        self.n_estimators = n_estimators
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
-        self.min_weight_fraction_leaf = min_weight_fraction_leaf
-        self.max_features = max_features
-        self.max_leaf_nodes = max_leaf_nodes
-        self.min_impurity_decrease = min_impurity_decrease
-        self.bootstrap = bootstrap
-        self.oob_score = oob_score
-        self.n_jobs = n_jobs
-        self.random_state = random_state
-        self.ccp_alpha = ccp_alpha
-        self.max_samples = max_samples
-
-    def fit(self, X, y, sample_weight=None):
-        """Build a Linear Forest from the training set (X, y).
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            The training input samples.
-
-        y : array-like of shape (n_samples, ) or (n_samples, n_targets)
-            Target values.
-
-        sample_weight : array-like of shape (n_samples, ), default=None
-            Sample weights.
-
-        Returns
-        -------
-        self : object
-        """
-        # Convert data (X is required to be 2d and indexable)
-        X, y = self._validate_data(
-            X, y, accept_sparse=True, dtype=None,
-            multi_output=False)
-        if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
-
-        self.classes_ = np.unique(y)
-        if len(self.classes_) > 2:
-            raise ValueError(
-                "LinearForestClassifier supports only binary classification task. "
-                "To solve a multi-lable classification task use "
-                "LinearForestClassifier with OneVsRestClassifier from sklearn.")
-
-        self._fit(X, y, sample_weight)
-
-        return self
-
-    def decision_function(self, X):
-        """Predict confidence scores for samples.
-
-        The confidence score for a sample is proportional to the signed
-        distance of that sample to the hyperplane.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Samples.
-
-        Returns
-        -------
-        pred : ndarray of shape (n_samples, )
-            Confidence scores.
-            Confidence score for self.classes_[1] where >0 means this
-            class would be predicted.
-        """
-        check_is_fitted(self, attributes='base_estimator_')
-        X = check_array(X, dtype=None, accept_sparse=False)
-        self._check_n_features(X, reset=False)
-
-        linear_pred = self.base_estimator_.predict(X)
-        forest_pred = self.forest_estimator_.predict(X)
-
-        return linear_pred + forest_pred
-
-    def predict(self, X):
-        """Predict class for X.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Samples.
-
-        Returns
-        -------
-        pred : ndarray of shape (n_samples, )
-            The predicted classes.
-        """
-        pred = self.decision_function(X)
-        pred_class = (self._sigmoid(pred) > 0.5).astype(int)
-        int_to_class = dict(enumerate(self.classes_))
-        pred_class = np.array([int_to_class[i] for i in pred_class])
-
-        return pred_class
-
-    def predict_proba(self, X):
-        """Predict class probabilities for X.
-
-        Parameters
-        ----------
-        X : array-like of shape (n_samples, n_features)
-            Samples.
-
-        Returns
-        -------
-        proba : ndarray of shape (n_samples, n_classes)
-            The class probabilities of the input samples. The order of the
-            classes corresponds to that in the attribute :term:`classes_`.
-        """
-        check_is_fitted(self, attributes='base_estimator_')
-        X = check_array(X, dtype=None, accept_sparse=False)
-        self._check_n_features(X, reset=False)
-
-        pred = self._sigmoid(self.base_estimator_.predict(X))
-        proba = np.zeros((X.shape[0], 2))
-        proba[:, 0] = 1 - pred
-        proba[:, 1] = pred
-
-        return proba
-
-    def predict_log_proba(self, X):
-        """Predict class log-probabilities for X.
 
         Parameters
         ----------
@@ -1458,10 +1188,18 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         """
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
-            X, y, accept_sparse=True, dtype=None,
-            multi_output=True)
+            X, y,
+            reset=True,
+            accept_sparse=True,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=True,
+            y_numeric=True,
+        )
         if sample_weight is not None:
-            sample_weight = _check_sample_weight(sample_weight, X, dtype=None)
+            sample_weight = _check_sample_weight(sample_weight, X)
 
         y_shape = np.shape(y)
         n_targets = y_shape[1] if len(y_shape) > 1 else 1
@@ -1486,10 +1224,358 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
             The predicted values.
         """
         check_is_fitted(self, attributes='base_estimator_')
-        X = check_array(X, dtype=None, accept_sparse=False)
-        self._check_n_features(X, reset=False)
+
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=True,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
 
         linear_pred = self.base_estimator_.predict(X)
         forest_pred = self.forest_estimator_.predict(X)
 
         return linear_pred + forest_pred
+
+
+class LinearForestClassifier(_LinearForest, ClassifierMixin):
+    """"A Linear Forest Classifier.
+
+    Linear forests generalizes the well known random forests by combining
+    linear models with the same random forests.
+    The key idea of linear forests is to use the strength of linear models
+    to improve the nonparametric learning ability of tree-based algorithms.
+    Firstly, a linear model is fitted on the whole dataset, then a random
+    forest is trained on the same dataset but using the residuals of the
+    previous steps as target. The final predictions are the sum of the raw
+    linear predictions and the residuals modeled by the random forest.
+
+    For classification tasks the same approach used in regression context
+    is adopted. The binary targets are transformed into logits using the
+    inverse sigmoid function. A linear regression is fitted. A random forest
+    regressor is trained to approximate the residulas from logits and linear
+    predictions. Finally the sigmoid of the combinded predictions are taken
+    to obtain probabilities.
+    The multi-label scenario is carried out using OneVsRestClassifier.
+
+    Parameters
+    ----------
+    base_estimator : object
+        The linear estimator fitted on the raw target.
+        The linear estimator must be a regressor from sklearn.linear_model.
+
+    n_estimators : int, default=100
+        The number of trees in the forest.
+
+    max_depth : int, default=None
+        The maximum depth of the tree. If None, then nodes are expanded until
+        all leaves are pure or until all leaves contain less than
+        min_samples_split samples.
+
+    min_samples_split : int or float, default=2
+        The minimum number of samples required to split an internal node:
+
+        - If int, then consider `min_samples_split` as the minimum number.
+        - If float, then `min_samples_split` is a fraction and
+          `ceil(min_samples_split * n_samples)` are the minimum
+          number of samples for each split.
+
+    min_samples_leaf : int or float, default=1
+        The minimum number of samples required to be at a leaf node.
+        A split point at any depth will only be considered if it leaves at
+        least ``min_samples_leaf`` training samples in each of the left and
+        right branches.  This may have the effect of smoothing the model,
+        especially in regression.
+
+        - If int, then consider `min_samples_leaf` as the minimum number.
+        - If float, then `min_samples_leaf` is a fraction and
+          `ceil(min_samples_leaf * n_samples)` are the minimum
+          number of samples for each node.
+
+    min_weight_fraction_leaf : float, default=0.0
+        The minimum weighted fraction of the sum total of weights (of all
+        the input samples) required to be at a leaf node. Samples have
+        equal weight when sample_weight is not provided.
+
+    max_features : {"auto", "sqrt", "log2"}, int or float, default="auto"
+        The number of features to consider when looking for the best split:
+
+        - If int, then consider `max_features` features at each split.
+        - If float, then `max_features` is a fraction and
+          `round(max_features * n_features)` features are considered at each
+          split.
+        - If "auto", then `max_features=n_features`.
+        - If "sqrt", then `max_features=sqrt(n_features)`.
+        - If "log2", then `max_features=log2(n_features)`.
+        - If None, then `max_features=n_features`.
+
+        Note: the search for a split does not stop until at least one
+        valid partition of the node samples is found, even if it requires to
+        effectively inspect more than ``max_features`` features.
+
+    max_leaf_nodes : int, default=None
+        Grow trees with ``max_leaf_nodes`` in best-first fashion.
+        Best nodes are defined as relative reduction in impurity.
+        If None then unlimited number of leaf nodes.
+
+    min_impurity_decrease : float, default=0.0
+        A node will be split if this split induces a decrease of the impurity
+        greater than or equal to this value.
+
+    bootstrap : bool, default=True
+        Whether bootstrap samples are used when building trees. If False, the
+        whole dataset is used to build each tree.
+
+    oob_score : bool, default=False
+        Whether to use out-of-bag samples to estimate the generalization score.
+        Only available if bootstrap=True.
+
+    n_jobs : int, default=None
+        The number of jobs to run in parallel. :meth:`fit`, :meth:`predict`,
+        :meth:`decision_path` and :meth:`apply` are all parallelized over the
+        trees. ``None`` means 1 unless in a :obj:`joblib.parallel_backend`
+        context. ``-1`` means using all processors.
+
+    random_state : int, RandomState instance or None, default=None
+        Controls both the randomness of the bootstrapping of the samples used
+        when building trees (if ``bootstrap=True``) and the sampling of the
+        features to consider when looking for the best split at each node
+        (if ``max_features < n_features``).
+
+    ccp_alpha : non-negative float, default=0.0
+        Complexity parameter used for Minimal Cost-Complexity Pruning. The
+        subtree with the largest cost complexity that is smaller than
+        ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
+        :ref:`minimal_cost_complexity_pruning` for details.
+
+    max_samples : int or float, default=None
+        If bootstrap is True, the number of samples to draw from X
+        to train each base estimator.
+
+        - If None (default), then draw `X.shape[0]` samples.
+        - If int, then draw `max_samples` samples.
+        - If float, then draw `max_samples * X.shape[0]` samples. Thus,
+          `max_samples` should be in the interval `(0, 1]`.
+
+    Attributes
+    ----------
+    n_features_in_ : int
+        The number of features when :meth:`fit` is performed.
+
+    feature_importances_ : ndarray of shape (n_features, )
+        The impurity-based feature importances.
+        The higher, the more important the feature.
+        The importance of a feature is computed as the (normalized)
+        total reduction of the criterion brought by that feature.  It is also
+        known as the Gini importance.
+
+    coef_ : ndarray of shape (1, n_features_out_)
+        Coefficient of the features in the decision function.
+
+    intercept_ : float
+        Independent term in the linear model. Set to 0 if `fit_intercept = False`
+        in `base_estimator`.
+
+    classes_ : ndarray of shape (n_classes, )
+        A list of class labels known to the classifier.
+
+    base_estimator_ : object
+        A fitted linear model instance.
+
+    forest_estimator_ : object
+        A fitted random forest instance.
+
+    Examples
+    --------
+    >>> from sklearn.linear_model import LinearRegression
+    >>> from lineartree import LinearForestClassifier
+    >>> from sklearn.datasets import make_classification
+    >>> X, y = make_classification(n_samples=100, n_classes=2, n_features=4,
+    ...                            n_informative=2, n_redundant=0,
+    ...                            random_state=0, shuffle=False)
+    >>> clf = LinearForestClassifier(base_estimator=LinearRegression())
+    >>> clf.fit(X, y)
+    >>> clf.predict([[0, 0, 0, 0]])
+    array([1])
+
+    References
+    ----------
+    Regression-Enhanced Random Forests.
+    Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
+    (https://arxiv.org/abs/1904.10416)
+    """
+    def __init__(self, base_estimator, *, n_estimators=100,
+                 max_depth=None, min_samples_split=2, min_samples_leaf=1,
+                 min_weight_fraction_leaf=0., max_features="auto",
+                 max_leaf_nodes=None, min_impurity_decrease=0.,
+                 bootstrap=True, oob_score=False, n_jobs=None,
+                 random_state=None, ccp_alpha=0.0, max_samples=None):
+
+        self.base_estimator = base_estimator
+        self.n_estimators = n_estimators
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
+        self.min_samples_leaf = min_samples_leaf
+        self.min_weight_fraction_leaf = min_weight_fraction_leaf
+        self.max_features = max_features
+        self.max_leaf_nodes = max_leaf_nodes
+        self.min_impurity_decrease = min_impurity_decrease
+        self.bootstrap = bootstrap
+        self.oob_score = oob_score
+        self.n_jobs = n_jobs
+        self.random_state = random_state
+        self.ccp_alpha = ccp_alpha
+        self.max_samples = max_samples
+
+    def fit(self, X, y, sample_weight=None):
+        """Build a Linear Forest from the training set (X, y).
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            The training input samples.
+
+        y : array-like of shape (n_samples, ) or (n_samples, n_targets)
+            Target values.
+
+        sample_weight : array-like of shape (n_samples, ), default=None
+            Sample weights.
+
+        Returns
+        -------
+        self : object
+        """
+        # Convert data (X is required to be 2d and indexable)
+        X, y = self._validate_data(
+            X, y,
+            reset=True,
+            accept_sparse=True,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            multi_output=False,
+        )
+        if sample_weight is not None:
+            sample_weight = _check_sample_weight(sample_weight, X)
+
+        self.classes_ = np.unique(y)
+        if len(self.classes_) > 2:
+            raise ValueError(
+                "LinearForestClassifier supports only binary classification task. "
+                "To solve a multi-lable classification task use "
+                "LinearForestClassifier with OneVsRestClassifier from sklearn.")
+
+        self._fit(X, y, sample_weight)
+
+        return self
+
+    def decision_function(self, X):
+        """Predict confidence scores for samples.
+
+        The confidence score for a sample is proportional to the signed
+        distance of that sample to the hyperplane.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples.
+
+        Returns
+        -------
+        pred : ndarray of shape (n_samples, )
+            Confidence scores.
+            Confidence score for self.classes_[1] where >0 means this
+            class would be predicted.
+        """
+        check_is_fitted(self, attributes='base_estimator_')
+
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=True,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
+
+        linear_pred = self.base_estimator_.predict(X)
+        forest_pred = self.forest_estimator_.predict(X)
+
+        return linear_pred + forest_pred
+
+    def predict(self, X):
+        """Predict class for X.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples.
+
+        Returns
+        -------
+        pred : ndarray of shape (n_samples, )
+            The predicted classes.
+        """
+        pred = self.decision_function(X)
+        pred_class = (self._sigmoid(pred) > 0.5).astype(int)
+        int_to_class = dict(enumerate(self.classes_))
+        pred_class = np.array([int_to_class[i] for i in pred_class])
+
+        return pred_class
+
+    def predict_proba(self, X):
+        """Predict class probabilities for X.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples.
+
+        Returns
+        -------
+        proba : ndarray of shape (n_samples, n_classes)
+            The class probabilities of the input samples. The order of the
+            classes corresponds to that in the attribute :term:`classes_`.
+        """
+        check_is_fitted(self, attributes='base_estimator_')
+
+        X = self._validate_data(
+            X,
+            reset=False,
+            accept_sparse=True,
+            dtype='float32',
+            force_all_finite=True,
+            ensure_2d=True,
+            allow_nd=False,
+            ensure_min_features=self.n_features_in_
+        )
+
+        pred = self._sigmoid(self.base_estimator_.predict(X))
+        proba = np.zeros((X.shape[0], 2))
+        proba[:, 0] = 1 - pred
+        proba[:, 1] = pred
+
+        return proba
+
+    def predict_log_proba(self, X):
+        """Predict class log-probabilities for X.
+
+        Parameters
+        ----------
+        X : array-like of shape (n_samples, n_features)
+            Samples.
+
+        Returns
+        -------
+        pred : ndarray of shape (n_samples, n_classes)
+            The class log-probabilities of the input samples. The order of the
+            classes corresponds to that in the attribute :term:`classes_`.
+        """
+        return np.log(self.predict_proba(X))
