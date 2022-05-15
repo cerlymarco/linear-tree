@@ -1544,20 +1544,8 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
             The class probabilities of the input samples. The order of the
             classes corresponds to that in the attribute :term:`classes_`.
         """
-        check_is_fitted(self, attributes='base_estimator_')
 
-        X = self._validate_data(
-            X,
-            reset=False,
-            accept_sparse=True,
-            dtype='float32',
-            force_all_finite=True,
-            ensure_2d=True,
-            allow_nd=False,
-            ensure_min_features=self.n_features_in_
-        )
-
-        pred = self._sigmoid(self.base_estimator_.predict(X))
+        pred = self._sigmoid(self.decision_function(X))
         proba = np.zeros((X.shape[0], 2))
         proba[:, 0] = 1 - pred
         proba[:, 1] = pred
