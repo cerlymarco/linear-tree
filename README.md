@@ -17,7 +17,7 @@ Like in tree-based algorithms, the data are split according to simple decision r
 ```shell
 pip install --upgrade linear-tree
 ```
-The module depends on NumPy, SciPy and Scikit-Learn (>=0.23.0). Python 3.6 or above is supported.
+The module depends on NumPy, SciPy and Scikit-Learn (>=0.24.2). Python 3.6 or above is supported.
 
 ## Media
 - [Linear Tree: the perfect mix of Linear Model and Decision Tree](https://towardsdatascience.com/linear-tree-the-perfect-mix-of-linear-model-and-decision-tree-2eaed21936b7)
