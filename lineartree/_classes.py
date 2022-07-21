@@ -152,7 +152,7 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                                    weights=weights[mask], **largs_right)
                 wloss_right = loss_right * (weights[mask].sum() / weights.sum())
 
-            total_loss = wloss_left + wloss_right
+            total_loss = round(wloss_left + wloss_right, 5)
 
             # store if best
             if total_loss < loss:
@@ -214,8 +214,8 @@ class _LinearTree(BaseEstimator):
     """
     def __init__(self, base_estimator, *, criterion, max_depth,
                  min_samples_split, min_samples_leaf, max_bins,
-                 categorical_features, split_features,
-                 linear_features, n_jobs):
+                 min_impurity_decrease, categorical_features,
+                 split_features, linear_features, n_jobs):
 
         self.base_estimator = base_estimator
         self.criterion = criterion
@@ -223,6 +223,7 @@ class _LinearTree(BaseEstimator):
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
+        self.min_impurity_decrease = min_impurity_decrease
         self.categorical_features = categorical_features
         self.split_features = split_features
         self.linear_features = linear_features
@@ -295,7 +296,7 @@ class _LinearTree(BaseEstimator):
 
         # select best results
         _id_best = np.argmin(_losses)
-        if _losses[_id_best] < loss:
+        if loss - _losses[_id_best] > self.min_impurity_decrease:
             split_t = split_t[_id_best]
             split_col = split_col[_id_best]
             left_node = left_node[_id_best]
@@ -362,6 +363,7 @@ class _LinearTree(BaseEstimator):
         loss = CRITERIA[self.criterion](
             model, X[:, self._linear_features], y,
             weights=weights, **largs)
+        loss = round(loss, 5)
 
         self._nodes[''] = Node(
             id=0,
@@ -651,8 +653,8 @@ class _LinearTree(BaseEstimator):
 
                 summary[N.id] = {
                     'col': feature_names[Cl.threshold[-1][0]],
-                    'th': round(Cl.threshold[-1][-1], 4),
-                    'loss': round(Cl.w_loss + Cr.w_loss, 4),
+                    'th': round(Cl.threshold[-1][-1], 5),
+                    'loss': round(Cl.w_loss + Cr.w_loss, 5),
                     'samples': Cl.n_samples + Cr.n_samples,
                     'children': (Cl.id, Cr.id),
                     'models': (Cl.model, Cr.model)
@@ -664,7 +666,7 @@ class _LinearTree(BaseEstimator):
                 continue
 
             summary[L.id] = {
-                'loss': round(L.loss, 4),
+                'loss': round(L.loss, 5),
                 'samples': L.n_samples,
                 'models': L.model
             }

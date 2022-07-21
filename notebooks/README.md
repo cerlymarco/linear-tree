@@ -43,6 +43,10 @@ class lineartree.LinearTreeRegressor(base_estimator, *, criterion = 'mse', max_d
 
     The maximum number of bins to use to search the optimal split in each feature. Features with a small number of unique values may use less than ``max_bins`` bins. Must be lower than 120 and larger than 10. 
     A higher value implies a higher training time. 
+    
+- ```min_impurity_decrease : float, default=0.0```
+
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
 
 - ```categorical_features : int or array-like of int, default=None```
 
@@ -279,6 +283,10 @@ class lineartree.LinearTreeClassifier(base_estimator, *, criterion = 'hamming', 
 
     The maximum number of bins to use to search the optimal split in each feature. Features with a small number of unique values may use less than ``max_bins`` bins. Must be lower than 120 and larger than 10. 
     A higher value implies a higher training time. 
+    
+- ```min_impurity_decrease : float, default=0.0```
+
+    A node will be split if this split induces a decrease of the impurity greater than or equal to this value.
 
 - ```categorical_features : int or array-like of int, default=None```
 

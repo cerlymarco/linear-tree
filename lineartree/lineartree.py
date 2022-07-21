@@ -59,6 +59,10 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         ``max_bins`` bins. Must be lower than 120 and larger than 10.
         A higher value implies a higher training time.
 
+    min_impurity_decrease : float, default=0.0
+        A node will be split if this split induces a decrease of the impurity
+        greater than or equal to this value.
+
     categorical_features : int or array-like of int, default=None
         Indicates the categorical features.
         All categorical indices must be in `[0, n_features)`.
@@ -119,8 +123,8 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
     """
     def __init__(self, base_estimator, *, criterion='mse', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
-                 categorical_features=None, split_features=None,
-                 linear_features=None, n_jobs=None):
+                 min_impurity_decrease=0.0, categorical_features=None,
+                 split_features=None, linear_features=None, n_jobs=None):
 
         self.base_estimator = base_estimator
         self.criterion = criterion
@@ -128,6 +132,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
+        self.min_impurity_decrease = min_impurity_decrease
         self.categorical_features = categorical_features
         self.split_features = split_features
         self.linear_features = linear_features
@@ -281,6 +286,10 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         ``max_bins`` bins. Must be lower than 120 and larger than 10.
         A higher value implies a higher training time.
 
+    min_impurity_decrease : float, default=0.0
+        A node will be split if this split induces a decrease of the impurity
+        greater than or equal to this value.
+
     categorical_features : int or array-like of int, default=None
         Indicates the categorical features.
         All categorical indices must be in `[0, n_features)`.
@@ -341,8 +350,8 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
     """
     def __init__(self, base_estimator, *, criterion='hamming', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
-                 categorical_features=None, split_features=None,
-                 linear_features=None, n_jobs=None):
+                 min_impurity_decrease=0.0, categorical_features=None,
+                 split_features=None, linear_features=None, n_jobs=None):
 
         self.base_estimator = base_estimator
         self.criterion = criterion
@@ -350,6 +359,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
+        self.min_impurity_decrease = min_impurity_decrease
         self.categorical_features = categorical_features
         self.split_features = split_features
         self.linear_features = linear_features
