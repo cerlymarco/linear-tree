@@ -335,7 +335,7 @@ class _LinearTree(BaseEstimator):
 
         # extract quantiles
         bins = np.linspace(0, 1, self.max_bins)[1:-1]
-        bins = np.quantile(X, bins, axis=0, interpolation='midpoint')
+        bins = np.quantile(X, bins, axis=0)
         bins = list(bins.T)
         bins = [np.unique(X[:, c]) if c in self._categorical_features
                 else np.unique(q) for c, q in enumerate(bins)]
