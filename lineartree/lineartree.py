@@ -20,7 +20,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The base estimator to fit on dataset splits.
         The base estimator must be a sklearn.linear_model.
 
@@ -96,6 +96,12 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         The number of jobs to run in parallel for model fitting.
         ``None`` means 1 using one processor. ``-1`` means using all
         processors.
+        
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
 
     Attributes
     ----------
@@ -116,17 +122,17 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
     >>> X, y = make_regression(n_samples=100, n_features=4,
     ...                        n_informative=2, n_targets=1,
     ...                        random_state=0, shuffle=False)
-    >>> regr = LinearTreeRegressor(base_estimator=LinearRegression())
+    >>> regr = LinearTreeRegressor(estimator=LinearRegression())
     >>> regr.fit(X, y)
     >>> regr.predict([[0, 0, 0, 0]])
     array([8.8817842e-16])
     """
-    def __init__(self, base_estimator, *, criterion='mse', max_depth=5,
+    def __init__(self, estimator, *, criterion='mse', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
                  min_impurity_decrease=0.0, categorical_features=None,
-                 split_features=None, linear_features=None, n_jobs=None):
+                 split_features=None, linear_features=None, n_jobs=None, base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -137,6 +143,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         self.split_features = split_features
         self.linear_features = linear_features
         self.n_jobs = n_jobs
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Tree of a linear estimator from the training
@@ -159,6 +166,15 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
         -------
         self : object
         """
+        
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+            
         reg_criterions = ('mse', 'rmse', 'mae', 'poisson')
 
         if self.criterion not in reg_criterions:
@@ -244,7 +260,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The base estimator to fit on dataset splits.
         The base estimator must be a sklearn.linear_model.
         The selected base estimator is automatically substituted by a
@@ -323,6 +339,12 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         The number of jobs to run in parallel for model fitting.
         ``None`` means 1 using one processor. ``-1`` means using all
         processors.
+        
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
 
     Attributes
     ----------
@@ -343,17 +365,18 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
     >>> X, y = make_classification(n_samples=100, n_features=4,
     ...                            n_informative=2, n_redundant=0,
     ...                            random_state=0, shuffle=False)
-    >>> clf = LinearTreeClassifier(base_estimator=RidgeClassifier())
+    >>> clf = LinearTreeClassifier(estimator=RidgeClassifier())
     >>> clf.fit(X, y)
     >>> clf.predict([[0, 0, 0, 0]])
     array([1])
     """
-    def __init__(self, base_estimator, *, criterion='hamming', max_depth=5,
+    def __init__(self, estimator, *, criterion='hamming', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
                  min_impurity_decrease=0.0, categorical_features=None,
-                 split_features=None, linear_features=None, n_jobs=None):
+                 split_features=None, linear_features=None, n_jobs=None,
+                 base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -364,6 +387,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         self.split_features = split_features
         self.linear_features = linear_features
         self.n_jobs = n_jobs
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Tree of a linear estimator from the training
@@ -386,15 +410,23 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
         -------
         self : object
         """
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+            
         clas_criterions = ('hamming', 'crossentropy')
 
         if self.criterion not in clas_criterions:
             raise ValueError("Classification tasks support only criterion in {}, "
                              "got '{}'.".format(clas_criterions, self.criterion))
 
-        if (not hasattr(self.base_estimator, 'predict_proba') and
+        if (not hasattr(self.estimator, 'predict_proba') and
                 self.criterion == 'crossentropy'):
-            raise ValueError("The 'crossentropy' criterion requires a base_estimator "
+            raise ValueError("The 'crossentropy' criterion requires a estimator "
                              "with predict_proba method.")
 
         # Convert data (X is required to be 2d and indexable)
@@ -486,7 +518,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
 
         pred = np.zeros((X.shape[0], len(self.classes_)))
 
-        if hasattr(self.base_estimator, 'predict_proba'):
+        if hasattr(self.estimator, 'predict_proba'):
             for L in self._leaves.values():
 
                 mask = _predict_branch(X, L.threshold)
@@ -536,7 +568,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The base estimator iteratively fitted.
         The base estimator must be a sklearn.linear_model.
 
@@ -610,7 +642,12 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
         subtree with the largest cost complexity that is smaller than
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
         :ref:`minimal_cost_complexity_pruning` for details.
-
+        
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
     Attributes
     ----------
     n_features_in_ : int
@@ -629,7 +666,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
 
     intercept_ : float or array of shape (n_targets, )
         Independent term in the linear model. Set to 0 if `fit_intercept = False`
-        in `base_estimator`
+        in `estimator`
 
     Examples
     --------
@@ -639,7 +676,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
     >>> X, y = make_regression(n_samples=100, n_features=4,
     ...                        n_informative=2, n_targets=1,
     ...                        random_state=0, shuffle=False)
-    >>> regr = LinearBoostRegressor(base_estimator=LinearRegression())
+    >>> regr = LinearBoostRegressor(estimator=LinearRegression())
     >>> regr.fit(X, y)
     >>> regr.predict([[0, 0, 0, 0]])
     array([8.8817842e-16])
@@ -650,13 +687,14 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
     Authors: Igor Ilic, Berk Gorgulu, Mucahit Cevik, Mustafa Gokce Baydogan.
     (https://arxiv.org/abs/2009.09110)
     """
-    def __init__(self, base_estimator, *, loss='linear', n_estimators=10,
+    def __init__(self, estimator, *, loss='linear', n_estimators=10,
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
-                 min_impurity_decrease=0.0, ccp_alpha=0.0):
+                 min_impurity_decrease=0.0, ccp_alpha=0.0,
+                 base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.loss = loss
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -668,6 +706,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
         self.ccp_alpha = ccp_alpha
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Boosting from the training set (X, y).
@@ -687,6 +726,14 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
         -------
         self : object
         """
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
         reg_losses = ('linear', 'square', 'absolute', 'exponential')
 
         if self.loss not in reg_losses:
@@ -730,9 +777,9 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
             multitarget regression.
             The predicted values.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
-        return self.base_estimator_.predict(self.transform(X))
+        return self.estimator_.predict(self.transform(X))
 
 
 class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
@@ -747,13 +794,13 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The base estimator iteratively fitted.
         The base estimator must be a sklearn.linear_model.
 
     loss : {"hamming", "entropy"}, default="entropy"
         The function used to calculate the residuals of each sample.
-        `"entropy"` can be used only if `base_estimator` has `predict_proba`
+        `"entropy"` can be used only if `estimator` has `predict_proba`
         method.
 
     n_estimators : int, default=10
@@ -824,6 +871,12 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         ``ccp_alpha`` will be chosen. By default, no pruning is performed. See
         :ref:`minimal_cost_complexity_pruning` for details.
 
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
+
     Attributes
     ----------
     n_features_in_ : int
@@ -839,7 +892,7 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
 
     intercept_ : float or array of shape (n_classes, )
         Independent term in the linear model. Set to 0 if `fit_intercept = False`
-        in `base_estimator`
+        in `estimator`
 
     classes_ : ndarray of shape (n_classes, )
         A list of class labels known to the classifier.
@@ -852,7 +905,7 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
     >>> X, y = make_classification(n_samples=100, n_features=4,
     ...                            n_informative=2, n_redundant=0,
     ...                            random_state=0, shuffle=False)
-    >>> clf = LinearBoostClassifier(base_estimator=RidgeClassifier())
+    >>> clf = LinearBoostClassifier(estimator=RidgeClassifier())
     >>> clf.fit(X, y)
     >>> clf.predict([[0, 0, 0, 0]])
     array([1])
@@ -863,13 +916,14 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
     Authors: Igor Ilic, Berk Gorgulu, Mucahit Cevik, Mustafa Gokce Baydogan.
     (https://arxiv.org/abs/2009.09110)
     """
-    def __init__(self, base_estimator, *, loss='hamming', n_estimators=10,
+    def __init__(self, estimator, *, loss='hamming', n_estimators=10,
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
-                 min_impurity_decrease=0.0, ccp_alpha=0.0):
+                 min_impurity_decrease=0.0, ccp_alpha=0.0,
+                 base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.loss = loss
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -881,6 +935,7 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
         self.ccp_alpha = ccp_alpha
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Boosting from the training set (X, y).
@@ -900,15 +955,23 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         -------
         self : object
         """
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
         clas_losses = ('hamming', 'entropy')
 
         if self.loss not in clas_losses:
             raise ValueError("Classification tasks support only loss in {}, "
                              "got '{}'.".format(clas_losses, self.loss))
 
-        if (not hasattr(self.base_estimator, 'predict_proba') and
+        if (not hasattr(self.estimator, 'predict_proba') and
                 self.loss == 'entropy'):
-            raise ValueError("The 'entropy' loss requires a base_estimator "
+            raise ValueError("The 'entropy' loss requires a estimator "
                              "with predict_proba method.")
 
         # Convert data (X is required to be 2d and indexable)
@@ -943,9 +1006,9 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
         pred : ndarray of shape (n_samples, )
             The predicted classes.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
-        return self.base_estimator_.predict(self.transform(X))
+        return self.estimator_.predict(self.transform(X))
 
     def predict_proba(self, X):
         """Predict class probabilities for X.
@@ -964,9 +1027,9 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
             The class probabilities of the input samples. The order of the
             classes corresponds to that in the attribute :term:`classes_`.
         """
-        if hasattr(self.base_estimator, 'predict_proba'):
-            check_is_fitted(self, attributes='base_estimator_')
-            pred = self.base_estimator_.predict_proba(self.transform(X))
+        if hasattr(self.estimator, 'predict_proba'):
+            check_is_fitted(self, attributes='estimator_')
+            pred = self.estimator_.predict_proba(self.transform(X))
 
         else:
             pred_class = self.predict(X)
@@ -1011,7 +1074,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The linear estimator fitted on the raw target.
         The linear estimator must be a regressor from sklearn.linear_model.
 
@@ -1107,6 +1170,11 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         - If int, then draw `max_samples` samples.
         - If float, then draw `max_samples * X.shape[0]` samples. Thus,
           `max_samples` should be in the interval `(0, 1]`.
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
 
     Attributes
     ----------
@@ -1128,9 +1196,9 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
 
     intercept_ : float or array of shape (n_targets,)
         Independent term in the linear model. Set to 0 if `fit_intercept = False`
-        in `base_estimator`.
+        in `estimator`.
 
-    base_estimator_ : object
+    estimator_ : object
         A fitted linear model instance.
 
     forest_estimator_ : object
@@ -1144,7 +1212,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
     >>> X, y = make_regression(n_samples=100, n_features=4,
     ...                        n_informative=2, n_targets=1,
     ...                        random_state=0, shuffle=False)
-    >>> regr = LinearForestRegressor(base_estimator=LinearRegression())
+    >>> regr = LinearForestRegressor(estimator=LinearRegression())
     >>> regr.fit(X, y)
     >>> regr.predict([[0, 0, 0, 0]])
     array([8.8817842e-16])
@@ -1155,14 +1223,15 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
     Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
     (https://arxiv.org/abs/1904.10416)
     """
-    def __init__(self, base_estimator, *, n_estimators=100,
+    def __init__(self, estimator, *, n_estimators=100,
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
                  bootstrap=True, oob_score=False, n_jobs=None,
-                 random_state=None, ccp_alpha=0.0, max_samples=None):
+                 random_state=None, ccp_alpha=0.0, max_samples=None,
+                 base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -1177,6 +1246,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         self.random_state = random_state
         self.ccp_alpha = ccp_alpha
         self.max_samples = max_samples
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Forest from the training set (X, y).
@@ -1196,6 +1266,14 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
         -------
         self : object
         """
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
             X, y,
@@ -1233,7 +1311,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
             multitarget regression.
             The predicted values.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
         X = self._validate_data(
             X,
@@ -1246,7 +1324,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
             ensure_min_features=self.n_features_in_
         )
 
-        linear_pred = self.base_estimator_.predict(X)
+        linear_pred = self.estimator_.predict(X)
         forest_pred = self.forest_estimator_.predict(X)
 
         return linear_pred + forest_pred
@@ -1274,7 +1352,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
 
     Parameters
     ----------
-    base_estimator : object
+    estimator : object
         The linear estimator fitted on the raw target.
         The linear estimator must be a regressor from sklearn.linear_model.
 
@@ -1371,6 +1449,12 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         - If float, then draw `max_samples * X.shape[0]` samples. Thus,
           `max_samples` should be in the interval `(0, 1]`.
 
+    base_estimator : object, default="deprecated"
+        Use `estimator` instead.
+        .. deprecated:: 0.3.6
+            `base_estimator` is deprecated and will be removed in 1.0.0
+            Use `estimator` instead.
+
     Attributes
     ----------
     n_features_in_ : int
@@ -1388,12 +1472,12 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
 
     intercept_ : float
         Independent term in the linear model. Set to 0 if `fit_intercept = False`
-        in `base_estimator`.
+        in `estimator`.
 
     classes_ : ndarray of shape (n_classes, )
         A list of class labels known to the classifier.
 
-    base_estimator_ : object
+    estimator_ : object
         A fitted linear model instance.
 
     forest_estimator_ : object
@@ -1407,7 +1491,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
     >>> X, y = make_classification(n_samples=100, n_classes=2, n_features=4,
     ...                            n_informative=2, n_redundant=0,
     ...                            random_state=0, shuffle=False)
-    >>> clf = LinearForestClassifier(base_estimator=LinearRegression())
+    >>> clf = LinearForestClassifier(estimator=LinearRegression())
     >>> clf.fit(X, y)
     >>> clf.predict([[0, 0, 0, 0]])
     array([1])
@@ -1418,14 +1502,15 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
     Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
     (https://arxiv.org/abs/1904.10416)
     """
-    def __init__(self, base_estimator, *, n_estimators=100,
+    def __init__(self, estimator, *, n_estimators=100,
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
                  bootstrap=True, oob_score=False, n_jobs=None,
-                 random_state=None, ccp_alpha=0.0, max_samples=None):
+                 random_state=None, ccp_alpha=0.0, max_samples=None,
+                 base_estimator="deprecated"):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -1440,6 +1525,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         self.random_state = random_state
         self.ccp_alpha = ccp_alpha
         self.max_samples = max_samples
+        self.base_estimator = base_estimator
 
     def fit(self, X, y, sample_weight=None):
         """Build a Linear Forest from the training set (X, y).
@@ -1459,6 +1545,14 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
         -------
         self : object
         """
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
         # Convert data (X is required to be 2d and indexable)
         X, y = self._validate_data(
             X, y,
@@ -1502,7 +1596,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
             Confidence score for self.classes_[1] where >0 means this
             class would be predicted.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
         X = self._validate_data(
             X,
@@ -1515,7 +1609,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
             ensure_min_features=self.n_features_in_
         )
 
-        linear_pred = self.base_estimator_.predict(X)
+        linear_pred = self.estimator_.predict(X)
         forest_pred = self.forest_estimator_.predict(X)
 
         return linear_pred + forest_pred
