@@ -109,8 +109,8 @@ def _parallel_binning_fit(split_feat, _self, X, y,
             left_mesh = np.ix_(~mask, _self._linear_features)
             right_mesh = np.ix_(mask, _self._linear_features)
 
-            model_left = deepcopy(_self.base_estimator)
-            model_right = deepcopy(_self.base_estimator)
+            model_left = deepcopy(_self.estimator)
+            model_right = deepcopy(_self.estimator)
 
             if hasattr(_self, 'classes_'):
                 largs_left['classes'] = np.unique(y[~mask])
@@ -152,7 +152,7 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                                    weights=weights[mask], **largs_right)
                 wloss_right = loss_right * (weights[mask].sum() / weights.sum())
 
-            total_loss = round(wloss_left + wloss_right, 5)
+            total_loss = wloss_left + wloss_right
 
             # store if best
             if total_loss < loss:
@@ -212,18 +212,17 @@ class _LinearTree(BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, criterion, max_depth,
+    def __init__(self, estimator, *, criterion, max_depth,
                  min_samples_split, min_samples_leaf, max_bins,
-                 min_impurity_decrease, categorical_features,
-                 split_features, linear_features, n_jobs):
+                 categorical_features, split_features,
+                 linear_features, n_jobs):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.criterion = criterion
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
         self.max_bins = max_bins
-        self.min_impurity_decrease = min_impurity_decrease
         self.categorical_features = categorical_features
         self.split_features = split_features
         self.linear_features = linear_features
@@ -296,7 +295,7 @@ class _LinearTree(BaseEstimator):
 
         # select best results
         _id_best = np.argmin(_losses)
-        if loss - _losses[_id_best] > self.min_impurity_decrease:
+        if _losses[_id_best] < loss:
             split_t = split_t[_id_best]
             split_col = split_col[_id_best]
             left_node = left_node[_id_best]
@@ -335,13 +334,13 @@ class _LinearTree(BaseEstimator):
 
         # extract quantiles
         bins = np.linspace(0, 1, self.max_bins)[1:-1]
-        bins = np.quantile(X, bins, axis=0)
+        bins = np.quantile(X, bins, axis=0, interpolation='midpoint')
         bins = list(bins.T)
         bins = [np.unique(X[:, c]) if c in self._categorical_features
                 else np.unique(q) for c, q in enumerate(bins)]
 
-        # check if base_estimator supports fitting with sample_weights
-        support_sample_weight = has_fit_parameter(self.base_estimator,
+        # check if estimator supports fitting with sample_weights
+        support_sample_weight = has_fit_parameter(self.estimator,
                                                   "sample_weight")
 
         queue = ['']  # queue of the nodes to evaluate for splitting
@@ -351,7 +350,7 @@ class _LinearTree(BaseEstimator):
 
         # initialize first fit
         largs = {'classes': None}
-        model = deepcopy(self.base_estimator)
+        model = deepcopy(self.estimator)
         if weights is None or not support_sample_weight:
             model.fit(X[:, self._linear_features], y)
         else:
@@ -363,7 +362,6 @@ class _LinearTree(BaseEstimator):
         loss = CRITERIA[self.criterion](
             model, X[:, self._linear_features], y,
             weights=weights, **largs)
-        loss = round(loss, 5)
 
         self._nodes[''] = Node(
             id=0,
@@ -511,9 +509,9 @@ class _LinearTree(BaseEstimator):
         if not 10 <= self.max_bins <= 120:
             raise ValueError("max_bins must be an integer in [10, 120].")
 
-        if not hasattr(self.base_estimator, 'fit_intercept'):
+        if not hasattr(self.estimator, 'fit_intercept'):
             raise ValueError(
-                "Only linear models are accepted as base_estimator. "
+                "Only linear models are accepted as estimator. "
                 "Select one from linear_model class of scikit-learn.")
 
         if self.categorical_features is not None:
@@ -653,8 +651,8 @@ class _LinearTree(BaseEstimator):
 
                 summary[N.id] = {
                     'col': feature_names[Cl.threshold[-1][0]],
-                    'th': round(Cl.threshold[-1][-1], 5),
-                    'loss': round(Cl.w_loss + Cr.w_loss, 5),
+                    'th': round(Cl.threshold[-1][-1], 4),
+                    'loss': round(Cl.w_loss + Cr.w_loss, 4),
                     'samples': Cl.n_samples + Cr.n_samples,
                     'children': (Cl.id, Cr.id),
                     'models': (Cl.model, Cr.model)
@@ -666,7 +664,7 @@ class _LinearTree(BaseEstimator):
                 continue
 
             summary[L.id] = {
-                'loss': round(L.loss, 5),
+                'loss': round(L.loss, 4),
                 'samples': L.n_samples,
                 'models': L.model
             }
@@ -858,13 +856,13 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, loss, n_estimators,
+    def __init__(self, estimator, *, loss, n_estimators,
                  max_depth, min_samples_split, min_samples_leaf,
                  min_weight_fraction_leaf, max_features,
                  random_state, max_leaf_nodes,
-                 min_impurity_decrease, ccp_alpha):
+                 min_impurity_decrease, ccp_alpha, base_estimator):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.loss = loss
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -876,6 +874,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         self.max_leaf_nodes = max_leaf_nodes
         self.min_impurity_decrease = min_impurity_decrease
         self.ccp_alpha = ccp_alpha
+        self.base_estimator = base_estimator
 
     def _fit(self, X, y, sample_weight=None):
         """Build a Linear Boosting from the training set (X, y).
@@ -897,8 +896,16 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         -------
         self : object
         """
-        if not hasattr(self.base_estimator, 'fit_intercept'):
-            raise ValueError("Only linear models are accepted as base_estimator. "
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
+        if not hasattr(self.estimator, 'fit_intercept'):
+            raise ValueError("Only linear models are accepted as estimator. "
                              "Select one from linear_model class of scikit-learn.")
 
         if self.n_estimators <= 0:
@@ -912,7 +919,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
 
         for i in range(self.n_estimators):
 
-            estimator = deepcopy(self.base_estimator)
+            estimator = deepcopy(self.estimator)
             estimator.fit(X, y, sample_weight=sample_weight)
 
             if self.loss == 'entropy':
@@ -953,14 +960,14 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             pred_tree = pred_tree.reshape(-1, 1)
             X = np.concatenate([X, pred_tree], axis=1)
 
-        self.base_estimator_ = deepcopy(self.base_estimator)
-        self.base_estimator_.fit(X, y, sample_weight=sample_weight)
+        self.estimator_ = deepcopy(self.estimator)
+        self.estimator_.fit(X, y, sample_weight=sample_weight)
 
-        if hasattr(self.base_estimator_, 'coef_'):
-            self.coef_ = self.base_estimator_.coef_
+        if hasattr(self.estimator_, 'coef_'):
+            self.coef_ = self.estimator_.coef_
 
-        if hasattr(self.base_estimator_, 'intercept_'):
-            self.intercept_ = self.base_estimator_.intercept_
+        if hasattr(self.estimator_, 'intercept_'):
+            self.intercept_ = self.estimator_.intercept_
 
         self.n_features_out_ = X.shape[1]
 
@@ -981,7 +988,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             Transformed dataset.
             `n_out` is equal to `n_features` + `n_estimators`
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
         X = self._validate_data(
             X,
@@ -1009,13 +1016,13 @@ class _LinearForest(BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, n_estimators, max_depth,
+    def __init__(self, estimator, *, n_estimators, max_depth,
                  min_samples_split, min_samples_leaf, min_weight_fraction_leaf,
                  max_features, max_leaf_nodes, min_impurity_decrease,
                  bootstrap, oob_score, n_jobs, random_state,
-                 ccp_alpha, max_samples):
+                 ccp_alpha, max_samples, base_estimator):
 
-        self.base_estimator = base_estimator
+        self.estimator = estimator
         self.n_estimators = n_estimators
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
@@ -1030,6 +1037,7 @@ class _LinearForest(BaseEstimator):
         self.random_state = random_state
         self.ccp_alpha = ccp_alpha
         self.max_samples = max_samples
+        self.base_estimator = base_estimator
 
     def _sigmoid(self, y):
         """Expit function (a.k.a. logistic sigmoid).
@@ -1083,12 +1091,20 @@ class _LinearForest(BaseEstimator):
         -------
         self : object
         """
-        if not hasattr(self.base_estimator, 'fit_intercept'):
-            raise ValueError("Only linear models are accepted as base_estimator. "
+        if self.base_estimator != "deprecated":
+            warnings.warn(
+                "`base_estimator` was renamed to `estimator` in version 0.3.6 and "
+                "will be removed in 1.0",
+                FutureWarning,
+            )
+            self.estimator = self.base_estimator
+
+        if not hasattr(self.estimator, 'fit_intercept'):
+            raise ValueError("Only linear models are accepted as estimator. "
                              "Select one from linear_model class of scikit-learn.")
 
-        if not is_regressor(self.base_estimator):
-            raise ValueError("Select a regressor linear model as base_estimator.")
+        if not is_regressor(self.estimator):
+            raise ValueError("Select a regressor linear model as estimator.")
 
         n_sample, self.n_features_in_ = X.shape
 
@@ -1097,9 +1113,9 @@ class _LinearForest(BaseEstimator):
             y = np.array([class_to_int[i] for i in y])
             y = self._inv_sigmoid(y)
 
-        self.base_estimator_ = deepcopy(self.base_estimator)
-        self.base_estimator_.fit(X, y, sample_weight)
-        resid = y - self.base_estimator_.predict(X)
+        self.estimator_ = deepcopy(self.estimator)
+        self.estimator_.fit(X, y, sample_weight)
+        resid = y - self.estimator_.predict(X)
 
         criterion = 'squared_error' if _sklearn_v1 else 'mse'
 
@@ -1122,11 +1138,11 @@ class _LinearForest(BaseEstimator):
         )
         self.forest_estimator_.fit(X, resid, sample_weight)
 
-        if hasattr(self.base_estimator_, 'coef_'):
-            self.coef_ = self.base_estimator_.coef_
+        if hasattr(self.estimator_, 'coef_'):
+            self.coef_ = self.estimator_.coef_
 
-        if hasattr(self.base_estimator_, 'intercept_'):
-            self.intercept_ = self.base_estimator_.intercept_
+        if hasattr(self.estimator_, 'intercept_'):
+            self.intercept_ = self.estimator_.intercept_
 
         self.feature_importances_ = self.forest_estimator_.feature_importances_
 
@@ -1146,7 +1162,7 @@ class _LinearForest(BaseEstimator):
             For each datapoint x in X and for each tree in the forest,
             return the index of the leaf x ends up in.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
         return self.forest_estimator_.apply(X)
 
@@ -1169,6 +1185,6 @@ class _LinearForest(BaseEstimator):
             The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]]
             gives the indicator value for the i-th estimator.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes='estimator_')
 
         return self.forest_estimator_.decision_path(X)
