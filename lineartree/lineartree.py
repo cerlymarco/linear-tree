@@ -127,7 +127,7 @@ class LinearTreeRegressor(_LinearTree, RegressorMixin):
     >>> regr.predict([[0, 0, 0, 0]])
     array([8.8817842e-16])
     """
-    def __init__(self, estimator, *, criterion='mse', max_depth=5,
+    def __init__(self, estimator=None, *, criterion='mse', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
                  min_impurity_decrease=0.0, categorical_features=None,
                  split_features=None, linear_features=None, n_jobs=None, base_estimator="deprecated"):
@@ -370,7 +370,7 @@ class LinearTreeClassifier(_LinearTree, ClassifierMixin):
     >>> clf.predict([[0, 0, 0, 0]])
     array([1])
     """
-    def __init__(self, estimator, *, criterion='hamming', max_depth=5,
+    def __init__(self, estimator=None, *, criterion='hamming', max_depth=5,
                  min_samples_split=6, min_samples_leaf=0.1, max_bins=25,
                  min_impurity_decrease=0.0, categorical_features=None,
                  split_features=None, linear_features=None, n_jobs=None,
@@ -687,7 +687,7 @@ class LinearBoostRegressor(_LinearBoosting, RegressorMixin):
     Authors: Igor Ilic, Berk Gorgulu, Mucahit Cevik, Mustafa Gokce Baydogan.
     (https://arxiv.org/abs/2009.09110)
     """
-    def __init__(self, estimator, *, loss='linear', n_estimators=10,
+    def __init__(self, estimator=None, *, loss='linear', n_estimators=10,
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
@@ -916,7 +916,7 @@ class LinearBoostClassifier(_LinearBoosting, ClassifierMixin):
     Authors: Igor Ilic, Berk Gorgulu, Mucahit Cevik, Mustafa Gokce Baydogan.
     (https://arxiv.org/abs/2009.09110)
     """
-    def __init__(self, estimator, *, loss='hamming', n_estimators=10,
+    def __init__(self, estimator=None, *, loss='hamming', n_estimators=10,
                  max_depth=3, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0.0, max_features=None,
                  random_state=None, max_leaf_nodes=None,
@@ -1223,7 +1223,7 @@ class LinearForestRegressor(_LinearForest, RegressorMixin):
     Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
     (https://arxiv.org/abs/1904.10416)
     """
-    def __init__(self, estimator, *, n_estimators=100,
+    def __init__(self, estimator=None, *, n_estimators=100,
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
@@ -1502,7 +1502,7 @@ class LinearForestClassifier(_LinearForest, ClassifierMixin):
     Authors: Haozhe Zhang, Dan Nettleton, Zhengyuan Zhu.
     (https://arxiv.org/abs/1904.10416)
     """
-    def __init__(self, estimator, *, n_estimators=100,
+    def __init__(self, estimator=None, *, n_estimators=100,
                  max_depth=None, min_samples_split=2, min_samples_leaf=1,
                  min_weight_fraction_leaf=0., max_features="auto",
                  max_leaf_nodes=None, min_impurity_decrease=0.,
