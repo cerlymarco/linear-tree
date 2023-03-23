@@ -1,3 +1,4 @@
+import warnings
 import numpy as np
 
 from sklearn.base import ClassifierMixin, RegressorMixin
