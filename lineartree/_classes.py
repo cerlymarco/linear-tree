@@ -1,52 +1,56 @@
 import numbers
+from copy import deepcopy
+from inspect import signature
+
 import numpy as np
 import scipy.sparse as sp
-
-from copy import deepcopy
-from joblib import Parallel, effective_n_jobs  # , delayed
-
-from sklearn.dummy import DummyClassifier
-from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
-
-from sklearn.base import is_regressor
-from sklearn.base import BaseEstimator, TransformerMixin
-from sklearn.utils.validation import has_fit_parameter, check_is_fitted
-
-from ._criterion import SCORING
-from ._criterion import mse, rmse, mae, poisson
-from ._criterion import hamming, crossentropy
-
 import sklearn
-_sklearn_v1 = eval(sklearn.__version__.split('.')[0]) > 0
+from joblib import Parallel, effective_n_jobs  # , delayed
+from sklearn.base import BaseEstimator, TransformerMixin, is_regressor
+from sklearn.dummy import DummyClassifier
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.utils.validation import check_is_fitted, has_fit_parameter
+
+from ._criterion import SCORING, crossentropy, hamming, mae, mse, poisson, rmse
+
+_sklearn_v1 = eval(sklearn.__version__.split(".")[0]) > 0
 
 
-CRITERIA = {"mse": mse,
-            "rmse": rmse,
-            "mae": mae,
-            "poisson": poisson,
-            "hamming": hamming,
-            "crossentropy": crossentropy}
+CRITERIA = {
+    "mse": mse,
+    "rmse": rmse,
+    "mae": mae,
+    "poisson": poisson,
+    "hamming": hamming,
+    "crossentropy": crossentropy,
+}
 
+
+import functools
+from functools import update_wrapper
 
 #########################################################################
 ### remove when https://github.com/joblib/joblib/issues/1071 is fixed ###
 #########################################################################
-from sklearn import get_config, config_context
-from functools import update_wrapper
-import functools
+from sklearn import config_context, get_config
+
 
 # from sklearn.utils.fixes
 def delayed(function):
     """Decorator used to capture the arguments of a function."""
+
     @functools.wraps(function)
     def delayed_function(*args, **kwargs):
         return _FuncWrapper(function), args, kwargs
+
     return delayed_function
+
 
 # from sklearn.utils.fixes
 class _FuncWrapper:
-    """"Load the global configuration before calling the function."""
+    """ "Load the global configuration before calling the function."""
+
     def __init__(self, function):
         self.function = function
         self.config = get_config()
@@ -55,6 +59,8 @@ class _FuncWrapper:
     def __call__(self, *args, **kwargs):
         with config_context(**self.config):
             return self.function(*args, **kwargs)
+
+
 #########################################################################
 #########################################################################
 #########################################################################
@@ -68,7 +74,7 @@ def _partition_columns(columns, n_jobs):
 
     # Partition columns between jobs
     n_columns_per_job = np.full(n_jobs, n_columns // n_jobs, dtype=int)
-    n_columns_per_job[:n_columns % n_jobs] += 1
+    n_columns_per_job[: n_columns % n_jobs] += 1
     columns_per_job = np.cumsum(n_columns_per_job)
     columns_per_job = np.split(columns, columns_per_job)
     columns_per_job = columns_per_job[:-1]
@@ -76,9 +82,9 @@ def _partition_columns(columns, n_jobs):
     return n_jobs, columns_per_job
 
 
-def _parallel_binning_fit(split_feat, _self, X, y,
-                          weights, support_sample_weight,
-                          bins, loss):
+def _parallel_binning_fit(
+    split_feat, _self, X, y, weights, support_sample_weight, bins, loss
+):
     """Private function to find the best column splittings within a job."""
     n_sample, n_feat = X.shape
     feval = CRITERIA[_self.criterion]
@@ -87,18 +93,16 @@ def _parallel_binning_fit(split_feat, _self, X, y,
     split_col = None
     left_node = (None, None, None, None)
     right_node = (None, None, None, None)
-    largs_left = {'classes': None}
-    largs_right = {'classes': None}
+    largs_left = {"classes": None}
+    largs_right = {"classes": None}
 
     if n_sample < _self._min_samples_split:
         return loss, split_t, split_col, left_node, right_node
 
     for col, _bin in zip(split_feat, bins):
-
         for q in _bin:
-
             # create 1D bool mask for right/left children
-            mask = (X[:, col] > q)
+            mask = X[:, col] > q
 
             n_left, n_right = (~mask).sum(), mask.sum()
 
@@ -112,44 +116,50 @@ def _parallel_binning_fit(split_feat, _self, X, y,
             model_left = deepcopy(_self.base_estimator)
             model_right = deepcopy(_self.base_estimator)
 
-            if hasattr(_self, 'classes_'):
-                largs_left['classes'] = np.unique(y[~mask])
-                largs_right['classes'] = np.unique(y[mask])
-                if len(largs_left['classes']) == 1:
+            if hasattr(_self, "classes_"):
+                largs_left["classes"] = np.unique(y[~mask])
+                largs_right["classes"] = np.unique(y[mask])
+                if len(largs_left["classes"]) == 1:
                     model_left = DummyClassifier(strategy="most_frequent")
-                if len(largs_right['classes']) == 1:
+                if len(largs_right["classes"]) == 1:
                     model_right = DummyClassifier(strategy="most_frequent")
 
             if weights is None:
                 model_left.fit(X[left_mesh], y[~mask])
-                loss_left = feval(model_left, X[left_mesh], y[~mask],
-                                  **largs_left)
+                loss_left = feval(model_left, X[left_mesh], y[~mask], **largs_left)
                 wloss_left = loss_left * (n_left / n_sample)
 
                 model_right.fit(X[right_mesh], y[mask])
-                loss_right = feval(model_right, X[right_mesh], y[mask],
-                                   **largs_right)
+                loss_right = feval(model_right, X[right_mesh], y[mask], **largs_right)
                 wloss_right = loss_right * (n_right / n_sample)
 
             else:
                 if support_sample_weight:
-                    model_left.fit(X[left_mesh], y[~mask],
-                                   sample_weight=weights[~mask])
+                    model_left.fit(X[left_mesh], y[~mask], sample_weight=weights[~mask])
 
-                    model_right.fit(X[right_mesh], y[mask],
-                                    sample_weight=weights[mask])
+                    model_right.fit(X[right_mesh], y[mask], sample_weight=weights[mask])
 
                 else:
                     model_left.fit(X[left_mesh], y[~mask])
 
                     model_right.fit(X[right_mesh], y[mask])
 
-                loss_left = feval(model_left, X[left_mesh], y[~mask],
-                                  weights=weights[~mask], **largs_left)
+                loss_left = feval(
+                    model_left,
+                    X[left_mesh],
+                    y[~mask],
+                    weights=weights[~mask],
+                    **largs_left
+                )
                 wloss_left = loss_left * (weights[~mask].sum() / weights.sum())
 
-                loss_right = feval(model_right, X[right_mesh], y[mask],
-                                   weights=weights[mask], **largs_right)
+                loss_right = feval(
+                    model_right,
+                    X[right_mesh],
+                    y[mask],
+                    weights=weights[mask],
+                    **largs_right
+                )
                 wloss_right = loss_right * (weights[mask].sum() / weights.sum())
 
             total_loss = round(wloss_left + wloss_right, 5)
@@ -159,20 +169,30 @@ def _parallel_binning_fit(split_feat, _self, X, y,
                 split_t = q
                 split_col = col
                 loss = total_loss
-                left_node = (model_left, loss_left, wloss_left,
-                             n_left, largs_left['classes'])
-                right_node = (model_right, loss_right, wloss_right,
-                              n_right, largs_right['classes'])
+                left_node = (
+                    model_left,
+                    loss_left,
+                    wloss_left,
+                    n_left,
+                    largs_left["classes"],
+                )
+                right_node = (
+                    model_right,
+                    loss_right,
+                    wloss_right,
+                    n_right,
+                    largs_right["classes"],
+                )
 
     return loss, split_t, split_col, left_node, right_node
 
 
 def _map_node(X, feat, direction, split):
     """Utility to map samples to nodes"""
-    if direction == 'L':
-        mask = (X[:, feat] <= split)
+    if direction == "L":
+        mask = X[:, feat] <= split
     else:
-        mask = (X[:, feat] > split)
+        mask = X[:, feat] > split
 
     return mask
 
@@ -190,11 +210,18 @@ def _predict_branch(X, branch_history, mask=None):
 
 
 class Node:
-
-    def __init__(self, id=None, threshold=[],
-                 parent=None, children=None,
-                 n_samples=None, w_loss=None,
-                 loss=None, model=None, classes=None):
+    def __init__(
+        self,
+        id=None,
+        threshold=[],
+        parent=None,
+        children=None,
+        n_samples=None,
+        w_loss=None,
+        loss=None,
+        model=None,
+        classes=None,
+    ):
         self.id = id
         self.threshold = threshold
         self.parent = parent
@@ -212,11 +239,22 @@ class _LinearTree(BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, criterion, max_depth,
-                 min_samples_split, min_samples_leaf, max_bins,
-                 min_impurity_decrease, categorical_features,
-                 split_features, linear_features, n_jobs):
 
+    def __init__(
+        self,
+        base_estimator,
+        *,
+        criterion,
+        max_depth,
+        min_samples_split,
+        min_samples_leaf,
+        max_bins,
+        min_impurity_decrease,
+        categorical_features,
+        split_features,
+        linear_features,
+        n_jobs
+    ):
         self.base_estimator = base_estimator
         self.criterion = criterion
         self.max_depth = max_depth
@@ -232,10 +270,7 @@ class _LinearTree(BaseEstimator):
     def _parallel_args(self):
         return {}
 
-    def _split(self, X, y, bins,
-               support_sample_weight,
-               weights=None,
-               loss=None):
+    def _split(self, X, y, bins, support_sample_weight, weights=None, loss=None):
         """Evaluate optimal splits in a given node (in a specific partition of
         X and y).
 
@@ -273,16 +308,19 @@ class _LinearTree(BaseEstimator):
         n_jobs, split_feat = _partition_columns(self._split_features, self.n_jobs)
 
         # partition columns splittings between jobs
-        all_results = Parallel(n_jobs=n_jobs, verbose=0,
-                               **self._parallel_args())(
+        all_results = Parallel(n_jobs=n_jobs, verbose=0, **self._parallel_args())(
             delayed(_parallel_binning_fit)(
                 feat,
-                self, X, y,
-                weights, support_sample_weight,
+                self,
+                X,
+                y,
+                weights,
+                support_sample_weight,
                 [bins[i] for i in feat],
-                loss
+                loss,
             )
-            for feat in split_feat)
+            for feat in split_feat
+        )
 
         # extract results from parallel loops
         _losses, split_t, split_col = [], [], []
@@ -337,40 +375,37 @@ class _LinearTree(BaseEstimator):
         bins = np.linspace(0, 1, self.max_bins)[1:-1]
         bins = np.quantile(X, bins, axis=0)
         bins = list(bins.T)
-        bins = [np.unique(X[:, c]) if c in self._categorical_features
-                else np.unique(q) for c, q in enumerate(bins)]
+        bins = [
+            np.unique(X[:, c]) if c in self._categorical_features else np.unique(q)
+            for c, q in enumerate(bins)
+        ]
 
         # check if base_estimator supports fitting with sample_weights
-        support_sample_weight = has_fit_parameter(self.base_estimator,
-                                                  "sample_weight")
+        support_sample_weight = has_fit_parameter(self.base_estimator, "sample_weight")
 
-        queue = ['']  # queue of the nodes to evaluate for splitting
+        queue = [""]  # queue of the nodes to evaluate for splitting
         # store the results of each node in dicts
         self._nodes = {}
         self._leaves = {}
 
         # initialize first fit
-        largs = {'classes': None}
+        largs = {"classes": None}
         model = deepcopy(self.base_estimator)
         if weights is None or not support_sample_weight:
             model.fit(X[:, self._linear_features], y)
         else:
             model.fit(X[:, self._linear_features], y, sample_weight=weights)
 
-        if hasattr(self, 'classes_'):
-            largs['classes'] = self.classes_
+        if hasattr(self, "classes_"):
+            largs["classes"] = self.classes_
 
         loss = CRITERIA[self.criterion](
-            model, X[:, self._linear_features], y,
-            weights=weights, **largs)
+            model, X[:, self._linear_features], y, weights=weights, **largs
+        )
         loss = round(loss, 5)
 
-        self._nodes[''] = Node(
-            id=0,
-            n_samples=n_sample,
-            model=model,
-            loss=loss,
-            classes=largs['classes']
+        self._nodes[""] = Node(
+            id=0, n_samples=n_sample, model=model, loss=loss, classes=largs["classes"]
         )
 
         # in the beginning consider all the samples
@@ -379,17 +414,19 @@ class _LinearTree(BaseEstimator):
 
         i = 1
         while len(queue) > 0:
-
             if weights is None:
                 split_t, split_col, left_node, right_node = self._split(
-                    X[mask], y[mask], bins,
-                    support_sample_weight,
-                    loss=loss)
+                    X[mask], y[mask], bins, support_sample_weight, loss=loss
+                )
             else:
                 split_t, split_col, left_node, right_node = self._split(
-                    X[mask], y[mask], bins,
-                    support_sample_weight, weights[mask],
-                    loss=loss)
+                    X[mask],
+                    y[mask],
+                    bins,
+                    support_sample_weight,
+                    weights[mask],
+                    loss=loss,
+                )
 
             # no utility in splitting
             if split_col is None or len(queue[-1]) >= self.max_depth:
@@ -397,50 +434,48 @@ class _LinearTree(BaseEstimator):
                 del self._nodes[queue[-1]]
                 queue.pop()
             else:
-                model_left, loss_left, wloss_left, n_left, class_left = \
-                    left_node
-                model_right, loss_right, wloss_right, n_right, class_right = \
-                    right_node
-                self.feature_importances_[split_col] += \
-                    loss - wloss_left - wloss_right
+                model_left, loss_left, wloss_left, n_left, class_left = left_node
+                model_right, loss_right, wloss_right, n_right, class_right = right_node
+                self.feature_importances_[split_col] += loss - wloss_left - wloss_right
 
-                self._nodes[queue[-1] + 'L'] = Node(
-                    id=i, parent=queue[-1],
+                self._nodes[queue[-1] + "L"] = Node(
+                    id=i,
+                    parent=queue[-1],
                     model=model_left,
                     loss=loss_left,
                     w_loss=wloss_left,
                     n_samples=n_left,
-                    threshold=self._nodes[queue[-1]].threshold[:] + [
-                        (split_col, 'L', split_t)
-                    ]
+                    threshold=self._nodes[queue[-1]].threshold[:]
+                    + [(split_col, "L", split_t)],
                 )
 
-                self._nodes[queue[-1] + 'R'] = Node(
-                    id=i + 1, parent=queue[-1],
+                self._nodes[queue[-1] + "R"] = Node(
+                    id=i + 1,
+                    parent=queue[-1],
                     model=model_right,
                     loss=loss_right,
                     w_loss=wloss_right,
                     n_samples=n_right,
-                    threshold=self._nodes[queue[-1]].threshold[:] + [
-                        (split_col, 'R', split_t)
-                    ]
+                    threshold=self._nodes[queue[-1]].threshold[:]
+                    + [(split_col, "R", split_t)],
                 )
 
-                if hasattr(self, 'classes_'):
-                    self._nodes[queue[-1] + 'L'].classes = class_left
-                    self._nodes[queue[-1] + 'R'].classes = class_right
+                if hasattr(self, "classes_"):
+                    self._nodes[queue[-1] + "L"].classes = class_left
+                    self._nodes[queue[-1] + "R"].classes = class_right
 
-                self._nodes[queue[-1]].children = (queue[-1] + 'L', queue[-1] + 'R')
+                self._nodes[queue[-1]].children = (queue[-1] + "L", queue[-1] + "R")
 
                 i += 2
                 q = queue[-1]
                 queue.pop()
-                queue.extend([q + 'R', q + 'L'])
+                queue.extend([q + "R", q + "L"])
 
             if len(queue) > 0:
                 loss = self._nodes[queue[-1]].loss
                 mask = _predict_branch(
-                    X, self._nodes[queue[-1]].threshold, start.copy())
+                    X, self._nodes[queue[-1]].threshold, start.copy()
+                )
 
         self.node_count = i
 
@@ -476,14 +511,18 @@ class _LinearTree(BaseEstimator):
                 raise ValueError(
                     "min_samples_split must be an integer greater than 5 or "
                     "a float in (0.0, 1.0); got the integer {}".format(
-                        self.min_samples_split))
+                        self.min_samples_split
+                    )
+                )
             self._min_samples_split = self.min_samples_split
         else:
-            if not 0. < self.min_samples_split < 1.:
+            if not 0.0 < self.min_samples_split < 1.0:
                 raise ValueError(
                     "min_samples_split must be an integer greater than 5 or "
                     "a float in (0.0, 1.0); got the float {}".format(
-                        self.min_samples_split))
+                        self.min_samples_split
+                    )
+                )
 
             self._min_samples_split = int(np.ceil(self.min_samples_split * n_sample))
             self._min_samples_split = max(6, self._min_samples_split)
@@ -493,14 +532,18 @@ class _LinearTree(BaseEstimator):
                 raise ValueError(
                     "min_samples_leaf must be an integer greater than 2 or "
                     "a float in (0.0, 1.0); got the integer {}".format(
-                        self.min_samples_leaf))
+                        self.min_samples_leaf
+                    )
+                )
             self._min_samples_leaf = self.min_samples_leaf
         else:
-            if not 0. < self.min_samples_leaf < 1.:
+            if not 0.0 < self.min_samples_leaf < 1.0:
                 raise ValueError(
                     "min_samples_leaf must be an integer greater than 2 or "
                     "a float in (0.0, 1.0); got the float {}".format(
-                        self.min_samples_leaf))
+                        self.min_samples_leaf
+                    )
+                )
 
             self._min_samples_leaf = int(np.ceil(self.min_samples_leaf * n_sample))
             self._min_samples_leaf = max(3, self._min_samples_leaf)
@@ -511,10 +554,11 @@ class _LinearTree(BaseEstimator):
         if not 10 <= self.max_bins <= 120:
             raise ValueError("max_bins must be an integer in [10, 120].")
 
-        if not hasattr(self.base_estimator, 'fit_intercept'):
+        if not hasattr(self.base_estimator, "fit_intercept"):
             raise ValueError(
                 "Only linear models are accepted as base_estimator. "
-                "Select one from linear_model class of scikit-learn.")
+                "Select one from linear_model class of scikit-learn."
+            )
 
         if self.categorical_features is not None:
             cat_features = np.unique(self.categorical_features)
@@ -522,17 +566,19 @@ class _LinearTree(BaseEstimator):
             if not issubclass(cat_features.dtype.type, numbers.Integral):
                 raise ValueError(
                     "No valid specification of categorical columns. "
-                    "Only a scalar, list or array-like of integers is allowed.")
+                    "Only a scalar, list or array-like of integers is allowed."
+                )
 
             if (cat_features < 0).any() or (cat_features >= n_feat).any():
                 raise ValueError(
-                    'Categorical features must be in [0, {}].'.format(
-                        n_feat - 1))
+                    "Categorical features must be in [0, {}].".format(n_feat - 1)
+                )
 
             if len(cat_features) == n_feat:
                 raise ValueError(
                     "Only categorical features detected. "
-                    "No features available for fitting.")
+                    "No features available for fitting."
+                )
         else:
             cat_features = []
         self._categorical_features = cat_features
@@ -543,12 +589,13 @@ class _LinearTree(BaseEstimator):
             if not issubclass(split_features.dtype.type, numbers.Integral):
                 raise ValueError(
                     "No valid specification of split_features. "
-                    "Only a scalar, list or array-like of integers is allowed.")
+                    "Only a scalar, list or array-like of integers is allowed."
+                )
 
             if (split_features < 0).any() or (split_features >= n_feat).any():
                 raise ValueError(
-                    'Splitting features must be in [0, {}].'.format(
-                        n_feat - 1))
+                    "Splitting features must be in [0, {}].".format(n_feat - 1)
+                )
         else:
             split_features = np.arange(n_feat)
         self._split_features = split_features
@@ -559,16 +606,16 @@ class _LinearTree(BaseEstimator):
             if not issubclass(linear_features.dtype.type, numbers.Integral):
                 raise ValueError(
                     "No valid specification of linear_features. "
-                    "Only a scalar, list or array-like of integers is allowed.")
+                    "Only a scalar, list or array-like of integers is allowed."
+                )
 
             if (linear_features < 0).any() or (linear_features >= n_feat).any():
                 raise ValueError(
-                    'Linear features must be in [0, {}].'.format(
-                        n_feat - 1))
+                    "Linear features must be in [0, {}].".format(n_feat - 1)
+                )
 
             if np.isin(linear_features, cat_features).any():
-                raise ValueError(
-                    "Linear features cannot be categorical features.")
+                raise ValueError("Linear features cannot be categorical features.")
         else:
             linear_features = np.setdiff1d(np.arange(n_feat), cat_features)
         self._linear_features = linear_features
@@ -619,60 +666,55 @@ class _LinearTree(BaseEstimator):
             (^): Only for split nodes.
             (^^): Only for leaf nodes.
         """
-        check_is_fitted(self, attributes='_nodes')
+        check_is_fitted(self, attributes="_nodes")
 
         if max_depth is None:
             max_depth = 20
         if max_depth < 1:
-            raise ValueError(
-                "max_depth must be > 0, got {}".format(max_depth))
+            raise ValueError("max_depth must be > 0, got {}".format(max_depth))
 
         summary = {}
 
         if len(self._nodes) > 0 and not only_leaves:
-
-            if (feature_names is not None and
-                    len(feature_names) != self.n_features_in_):
+            if feature_names is not None and len(feature_names) != self.n_features_in_:
                 raise ValueError(
                     "feature_names must contain {} elements, got {}".format(
-                        self.n_features_in_, len(feature_names)))
+                        self.n_features_in_, len(feature_names)
+                    )
+                )
 
             if feature_names is None:
                 feature_names = np.arange(self.n_features_in_)
 
             for n, N in self._nodes.items():
-
                 if len(n) >= max_depth:
                     continue
 
                 cl, cr = N.children
-                Cl = (self._nodes[cl] if cl in self._nodes
-                      else self._leaves[cl])
-                Cr = (self._nodes[cr] if cr in self._nodes
-                      else self._leaves[cr])
+                Cl = self._nodes[cl] if cl in self._nodes else self._leaves[cl]
+                Cr = self._nodes[cr] if cr in self._nodes else self._leaves[cr]
 
                 summary[N.id] = {
-                    'col': feature_names[Cl.threshold[-1][0]],
-                    'th': round(Cl.threshold[-1][-1], 5),
-                    'loss': round(Cl.w_loss + Cr.w_loss, 5),
-                    'samples': Cl.n_samples + Cr.n_samples,
-                    'children': (Cl.id, Cr.id),
-                    'models': (Cl.model, Cr.model)
+                    "col": feature_names[Cl.threshold[-1][0]],
+                    "th": round(Cl.threshold[-1][-1], 5),
+                    "loss": round(Cl.w_loss + Cr.w_loss, 5),
+                    "samples": Cl.n_samples + Cr.n_samples,
+                    "children": (Cl.id, Cr.id),
+                    "models": (Cl.model, Cr.model),
                 }
 
         for l, L in self._leaves.items():
-
             if len(l) > max_depth:
                 continue
 
             summary[L.id] = {
-                'loss': round(L.loss, 5),
-                'samples': L.n_samples,
-                'models': L.model
+                "loss": round(L.loss, 5),
+                "samples": L.n_samples,
+                "models": L.model,
             }
 
-            if hasattr(self, 'classes_'):
-                summary[L.id]['classes'] = L.classes
+            if hasattr(self, "classes_"):
+                summary[L.id]["classes"] = L.classes
 
         return summary
 
@@ -692,23 +734,22 @@ class _LinearTree(BaseEstimator):
             ``[0; n_nodes)``, possibly with gaps in the
             numbering.
         """
-        check_is_fitted(self, attributes='_nodes')
+        check_is_fitted(self, attributes="_nodes")
 
         X = self._validate_data(
             X,
             reset=False,
             accept_sparse=False,
-            dtype='float32',
+            dtype="float32",
             force_all_finite=True,
             ensure_2d=True,
             allow_nd=False,
-            ensure_min_features=self.n_features_in_
+            ensure_min_features=self.n_features_in_,
         )
 
-        X_leaves = np.zeros(X.shape[0], dtype='int64')
+        X_leaves = np.zeros(X.shape[0], dtype="int64")
 
         for L in self._leaves.values():
-
             mask = _predict_branch(X, L.threshold)
             if (~mask).all():
                 continue
@@ -731,23 +772,22 @@ class _LinearTree(BaseEstimator):
             Return a node indicator CSR matrix where non zero elements
             indicates that the samples goes through the nodes.
         """
-        check_is_fitted(self, attributes='_nodes')
+        check_is_fitted(self, attributes="_nodes")
 
         X = self._validate_data(
             X,
             reset=False,
             accept_sparse=False,
-            dtype='float32',
+            dtype="float32",
             force_all_finite=True,
             ensure_2d=True,
             allow_nd=False,
-            ensure_min_features=self.n_features_in_
+            ensure_min_features=self.n_features_in_,
         )
 
-        indicator = np.zeros((X.shape[0], self.node_count), dtype='int64')
+        indicator = np.zeros((X.shape[0], self.node_count), dtype="int64")
 
         for L in self._leaves.values():
-
             mask = _predict_branch(X, L.threshold)
             if (~mask).all():
                 continue
@@ -789,36 +829,39 @@ class _LinearTree(BaseEstimator):
         import pydot
 
         summary = self.summary(feature_names=feature_names, max_depth=max_depth)
-        graph = pydot.Dot('linear_tree', graph_type='graph')
+        graph = pydot.Dot("linear_tree", graph_type="graph")
 
         # create nodes
         for n in summary:
-            if 'col' in summary[n]:
-                if isinstance(summary[n]['col'], str):
+            if "col" in summary[n]:
+                if isinstance(summary[n]["col"], str):
                     msg = "id_node: {}\n{} <= {}\nloss: {:.4f}\nsamples: {}"
                 else:
                     msg = "id_node: {}\nX[{}] <= {}\nloss: {:.4f}\nsamples: {}"
 
                 msg = msg.format(
-                    n, summary[n]['col'], summary[n]['th'],
-                    summary[n]['loss'], summary[n]['samples']
+                    n,
+                    summary[n]["col"],
+                    summary[n]["th"],
+                    summary[n]["loss"],
+                    summary[n]["samples"],
                 )
-                graph.add_node(pydot.Node(n, label=msg, shape='rectangle'))
+                graph.add_node(pydot.Node(n, label=msg, shape="rectangle"))
 
-                for c in summary[n]['children']:
+                for c in summary[n]["children"]:
                     if c not in summary:
-                        graph.add_node(pydot.Node(c, label="...",
-                                                  shape='rectangle'))
+                        graph.add_node(pydot.Node(c, label="...", shape="rectangle"))
 
             else:
                 msg = "id_node: {}\nloss: {:.4f}\nsamples: {}".format(
-                    n, summary[n]['loss'], summary[n]['samples'])
+                    n, summary[n]["loss"], summary[n]["samples"]
+                )
                 graph.add_node(pydot.Node(n, label=msg))
 
         # add edges
         for n in summary:
-            if 'children' in summary[n]:
-                for c in summary[n]['children']:
+            if "children" in summary[n]:
+                for c in summary[n]["children"]:
                     graph.add_edge(pydot.Edge(n, c))
 
         return graph
@@ -858,12 +901,23 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, loss, n_estimators,
-                 max_depth, min_samples_split, min_samples_leaf,
-                 min_weight_fraction_leaf, max_features,
-                 random_state, max_leaf_nodes,
-                 min_impurity_decrease, ccp_alpha):
 
+    def __init__(
+        self,
+        base_estimator,
+        *,
+        loss,
+        n_estimators,
+        max_depth,
+        min_samples_split,
+        min_samples_leaf,
+        min_weight_fraction_leaf,
+        max_features,
+        random_state,
+        max_leaf_nodes,
+        min_impurity_decrease,
+        ccp_alpha
+    ):
         self.base_estimator = base_estimator
         self.loss = loss
         self.n_estimators = n_estimators
@@ -897,13 +951,17 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         -------
         self : object
         """
-        if not hasattr(self.base_estimator, 'fit_intercept'):
-            raise ValueError("Only linear models are accepted as base_estimator. "
-                             "Select one from linear_model class of scikit-learn.")
+        if not hasattr(self.base_estimator, "fit_intercept"):
+            raise ValueError(
+                "Only linear models are accepted as base_estimator. "
+                "Select one from linear_model class of scikit-learn."
+            )
 
         if self.n_estimators <= 0:
-            raise ValueError("n_estimators must be an integer greater than 0 but "
-                             "got {}".format(self.n_estimators))
+            raise ValueError(
+                "n_estimators must be an integer greater than 0 but "
+                "got {}".format(self.n_estimators)
+            )
 
         n_sample, self.n_features_in_ = X.shape
 
@@ -911,16 +969,22 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
         self._leaves = []
 
         for i in range(self.n_estimators):
-
             estimator = deepcopy(self.base_estimator)
-            estimator.fit(X, y, sample_weight=sample_weight)
 
-            if self.loss == 'entropy':
+            sig = signature(estimator.fit)
+            estimator_fit_params = sig.parameters
+
+            if "sample_weight" in estimator_fit_params:
+                estimator.fit(X, y, sample_weight=sample_weight)
+            else:
+                estimator.fit(X, y)
+
+            if self.loss == "entropy":
                 pred = estimator.predict_proba(X)
             else:
                 pred = estimator.predict(X)
 
-            if hasattr(self, 'classes_'):
+            if hasattr(self, "classes_"):
                 resid = SCORING[self.loss](y, pred, self.classes_)
             else:
                 resid = SCORING[self.loss](y, pred)
@@ -928,10 +992,11 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             if resid.ndim > 1:
                 resid = resid.mean(1)
 
-            criterion = 'squared_error' if _sklearn_v1 else 'mse'
+            criterion = "squared_error" if _sklearn_v1 else "mse"
 
             tree = DecisionTreeRegressor(
-                criterion=criterion, max_depth=self.max_depth,
+                criterion=criterion,
+                max_depth=self.max_depth,
                 min_samples_split=self.min_samples_split,
                 min_samples_leaf=self.min_samples_leaf,
                 min_weight_fraction_leaf=self.min_weight_fraction_leaf,
@@ -939,7 +1004,7 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
                 random_state=self.random_state,
                 max_leaf_nodes=self.max_leaf_nodes,
                 min_impurity_decrease=self.min_impurity_decrease,
-                ccp_alpha=self.ccp_alpha
+                ccp_alpha=self.ccp_alpha,
             )
 
             tree.fit(X, resid, sample_weight=sample_weight, check_input=False)
@@ -954,12 +1019,19 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             X = np.concatenate([X, pred_tree], axis=1)
 
         self.base_estimator_ = deepcopy(self.base_estimator)
-        self.base_estimator_.fit(X, y, sample_weight=sample_weight)
 
-        if hasattr(self.base_estimator_, 'coef_'):
+        sig = signature(self.base_estimator_.fit)
+        estimator_fit_params = sig.parameters
+
+        if "sample_weight" in estimator_fit_params:
+            self.base_estimator_.fit(X, y, sample_weight=sample_weight)
+        else:
+            self.base_estimator_.fit(X, y)
+
+        if hasattr(self.base_estimator_, "coef_"):
             self.coef_ = self.base_estimator_.coef_
 
-        if hasattr(self.base_estimator_, 'intercept_'):
+        if hasattr(self.base_estimator_, "intercept_"):
             self.intercept_ = self.base_estimator_.intercept_
 
         self.n_features_out_ = X.shape[1]
@@ -981,17 +1053,17 @@ class _LinearBoosting(TransformerMixin, BaseEstimator):
             Transformed dataset.
             `n_out` is equal to `n_features` + `n_estimators`
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes="base_estimator_")
 
         X = self._validate_data(
             X,
             reset=False,
             accept_sparse=False,
-            dtype='float32',
+            dtype="float32",
             force_all_finite=True,
             ensure_2d=True,
             allow_nd=False,
-            ensure_min_features=self.n_features_in_
+            ensure_min_features=self.n_features_in_,
         )
 
         for tree, leaf in zip(self._trees, self._leaves):
@@ -1009,12 +1081,26 @@ class _LinearForest(BaseEstimator):
     Warning: This class should not be used directly. Use derived classes
     instead.
     """
-    def __init__(self, base_estimator, *, n_estimators, max_depth,
-                 min_samples_split, min_samples_leaf, min_weight_fraction_leaf,
-                 max_features, max_leaf_nodes, min_impurity_decrease,
-                 bootstrap, oob_score, n_jobs, random_state,
-                 ccp_alpha, max_samples):
 
+    def __init__(
+        self,
+        base_estimator,
+        *,
+        n_estimators,
+        max_depth,
+        min_samples_split,
+        min_samples_leaf,
+        min_weight_fraction_leaf,
+        max_features,
+        max_leaf_nodes,
+        min_impurity_decrease,
+        bootstrap,
+        oob_score,
+        n_jobs,
+        random_state,
+        ccp_alpha,
+        max_samples
+    ):
         self.base_estimator = base_estimator
         self.n_estimators = n_estimators
         self.max_depth = max_depth
@@ -1083,16 +1169,18 @@ class _LinearForest(BaseEstimator):
         -------
         self : object
         """
-        if not hasattr(self.base_estimator, 'fit_intercept'):
-            raise ValueError("Only linear models are accepted as base_estimator. "
-                             "Select one from linear_model class of scikit-learn.")
+        if not hasattr(self.base_estimator, "fit_intercept"):
+            raise ValueError(
+                "Only linear models are accepted as base_estimator. "
+                "Select one from linear_model class of scikit-learn."
+            )
 
         if not is_regressor(self.base_estimator):
             raise ValueError("Select a regressor linear model as base_estimator.")
 
         n_sample, self.n_features_in_ = X.shape
 
-        if hasattr(self, 'classes_'):
+        if hasattr(self, "classes_"):
             class_to_int = dict(map(reversed, enumerate(self.classes_)))
             y = np.array([class_to_int[i] for i in y])
             y = self._inv_sigmoid(y)
@@ -1101,7 +1189,7 @@ class _LinearForest(BaseEstimator):
         self.base_estimator_.fit(X, y, sample_weight)
         resid = y - self.base_estimator_.predict(X)
 
-        criterion = 'squared_error' if _sklearn_v1 else 'mse'
+        criterion = "squared_error" if _sklearn_v1 else "mse"
 
         self.forest_estimator_ = RandomForestRegressor(
             n_estimators=self.n_estimators,
@@ -1118,14 +1206,14 @@ class _LinearForest(BaseEstimator):
             n_jobs=self.n_jobs,
             random_state=self.random_state,
             ccp_alpha=self.ccp_alpha,
-            max_samples=self.max_samples
+            max_samples=self.max_samples,
         )
         self.forest_estimator_.fit(X, resid, sample_weight)
 
-        if hasattr(self.base_estimator_, 'coef_'):
+        if hasattr(self.base_estimator_, "coef_"):
             self.coef_ = self.base_estimator_.coef_
 
-        if hasattr(self.base_estimator_, 'intercept_'):
+        if hasattr(self.base_estimator_, "intercept_"):
             self.intercept_ = self.base_estimator_.intercept_
 
         self.feature_importances_ = self.forest_estimator_.feature_importances_
@@ -1146,7 +1234,7 @@ class _LinearForest(BaseEstimator):
             For each datapoint x in X and for each tree in the forest,
             return the index of the leaf x ends up in.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes="base_estimator_")
 
         return self.forest_estimator_.apply(X)
 
@@ -1169,6 +1257,6 @@ class _LinearForest(BaseEstimator):
             The columns from indicator[n_nodes_ptr[i]:n_nodes_ptr[i+1]]
             gives the indicator value for the i-th estimator.
         """
-        check_is_fitted(self, attributes='base_estimator_')
+        check_is_fitted(self, attributes="base_estimator_")
 
         return self.forest_estimator_.decision_path(X)
